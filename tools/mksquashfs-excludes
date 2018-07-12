@@ -1,0 +1,10 @@
+boot/*
+tmp/*
+var/lib/apt/lists/*
+usr/share/doc/*
+usr/share/icons/*/.icon-theme.cache
+usr/share/icons/*/icon-theme.cache
+var/cache/debconf/*
+var/lib/dpkg/info/*.md5sums
+var/lib/systemd/catalog/database
+var/log/*
