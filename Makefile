@@ -1,4 +1,4 @@
-RELEASE = 0.4.0
+RELEASE = 0.4.1
 
 .PHONY: usage build remove run copy all default
 

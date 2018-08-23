@@ -18,8 +18,8 @@ debuerreotype-chroot $WD/chroot passwd -d root
 debuerreotype-apt-get $WD/chroot update
 debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false install \
     --no-install-recommends --yes \
-    linux-image-amd64 live-boot systemd-sysv \
-    syslinux syslinux-common isolinux
+    linux-image-$ARCH live-boot systemd-sysv \
+    grub-pc-bin grub-efi-ia32-bin grub-efi-amd64-bin
 debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false install \
     --no-install-recommends --yes \
     iproute2 ifupdown pciutils usbutils dosfstools eject exfat-utils \
@@ -101,40 +101,49 @@ EOF
 
 # Creating boot directories
 mkdir -p $WD/image/live
-mkdir -p $WD/image/isolinux
+mkdir -p $WD/image/boot/grub
+mkdir -p $WD/image/efi/boot
 
 # Copying bootloader
-cp -p $WD/chroot/boot/vmlinuz-* $WD/image/live/vmlinuz
-cp -p $WD/chroot/boot/initrd.img-* $WD/image/live/initrd.img
+cp -p $WD/chroot/boot/vmlinuz-* $WD/image/boot/vmlinuz
+cp -p $WD/chroot/boot/initrd.img-* $WD/image/boot/initrd.img
 
-# Creating the isolinux bootloader
-cat > $WD/image/isolinux/isolinux.cfg << EOF
-UI menu.c32
+# Creating the GRUB configuration
+cp -a $WD/chroot/usr/lib/grub/i386-pc $WD/image/boot/grub/i386-pc
+cp -a $WD/chroot/usr/lib/grub/i386-efi $WD/image/boot/grub/i386-efi
+cp -a $WD/chroot/usr/lib/grub/x86_64-efi $WD/image/boot/grub/x86_64-efi
+cp -p $WD/chroot/usr/share/grub/unicode.pf2 $WD/image/boot/grub/unicode.pf2
+cat > $WD/image/boot/grub/grub.cfg << EOF
 
-prompt 0
-menu title coen-${RELEASE}
+set timeout=1
 
-timeout 1
+if loadfont /boot/grub/fonts/unicode.pf2 ; then
+	set gfxmode=auto
+	insmod efi_gop
+	insmod efi_uga
+	insmod gfxterm
+	terminal_output gfxterm
+fi
 
-label coen-${RELEASE} Live amd64
-menu label ^coen-${RELEASE} amd64
-menu default
-kernel /live/vmlinuz
-append initrd=/live/initrd.img boot=live locales=en_US.UTF-8 keymap=us language=us net.ifnames=0 timezone=Etc/UTC live-media=removable nopersistence selinux=0 STATICIP=frommedia modprobe.blacklist=pcspkr,hci_uart,btintel,btqca,btbcm,bluetooth,snd_hda_intel,snd_hda_codec_realtek,snd_soc_skl,snd_soc_skl_ipc,snd_soc_sst_ipc,snd_soc_sst_dsp,snd_hda_ext_core,snd_soc_sst_match,snd_soc_core,snd_compress,snd_hda_core,snd_pcm,snd_timer,snd,soundcore
+set menu_color_normal=white/black
+set menu_color_highlight=black/light-gray
+
+menuentry "coen-${RELEASE} ${ARCH}" --hotkey "c" --id "coen-${RELEASE} Live ${ARCH}" {
+	set gfxpayload=keep
+	linux	/boot/vmlinuz  boot=live locales=en_US.UTF-8 keymap=us language=us net.ifnames=0 timezone=Etc/UTC live-media=removable nopersistence selinux=0 STATICIP=frommedia modprobe.blacklist=pcspkr,hci_uart,btintel,btqca,btbcm,bluetooth,snd_hda_intel,snd_hda_codec_realtek,snd_soc_skl,snd_soc_skl_ipc,snd_soc_sst_ipc,snd_soc_sst_dsp,snd_hda_ext_core,snd_soc_sst_match,snd_soc_core,snd_compress,snd_hda_core,snd_pcm,snd_timer,snd,soundcore
+	initrd	/boot/initrd.img
+}
 
 EOF
 
-# Coping files for ISO booting
-cp -p $WD/chroot/usr/lib/ISOLINUX/isolinux.bin $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/ISOLINUX/isohdpfx.bin $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/menu.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/hdt.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/ldlinux.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/libutil.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/libmenu.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/libcom32.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/libgpl.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/share/misc/pci.ids $WD/image/isolinux/
+# Creating GRUB images
+grub-mkimage --directory "$WD/chroot/usr/lib/grub/i386-pc" --prefix '/boot/grub' --output "$WD/image/boot/grub/i386-pc/eltorito.img" --format 'i386-pc-eltorito' --compression 'auto'  --config "$WD/image/boot/grub/grub.cfg" 'biosdisk' 'iso9660'
+grub-mkimage --directory "$WD/chroot/usr/lib/grub/i386-efi" --prefix '()/boot/grub' --output "$WD/image/efi/boot/bootia32.efi" --format 'i386-efi' --compression 'auto'  --config "$WD/image/boot/grub/grub.cfg" 'part_gpt' 'part_msdos' 'fat' 'part_apple' 'iso9660'
+grub-mkimage --directory "$WD/chroot/usr/lib/grub/x86_64-efi" --prefix '()/boot/grub' --output "$WD/image/efi/boot/bootx64.efi" --format 'x86_64-efi' --compression 'auto'  --config "$WD/image/boot/grub/grub.cfg" 'part_gpt' 'part_msdos' 'fat' 'part_apple' 'iso9660'
+
+# Creating EFI boot image
+mformat -C -f 2880 -L 16 -N 0 -i "$WD/image/boot/grub/efi.img" ::.
+mcopy -s -i "$WD/image/boot/grub/efi.img" "$WD/image/efi" ::/.
 
 # Fixing dates to SOURCE_DATE_EPOCH
 debuerreotype-fixup $WD/chroot
@@ -152,10 +161,7 @@ chmod 644 $WD/image/live/filesystem.squashfs
 find "$WD/image/" -exec touch --no-dereference --date="@$SOURCE_DATE_EPOCH" '{}' +
 
 # Creating the iso
-xorriso -outdev $ISONAME -volid COEN \
- -map $WD/image/ / -chmod 0755 / -- -boot_image isolinux dir=/isolinux \
- -boot_image isolinux system_area=$WD/chroot/usr/lib/ISOLINUX/isohdpfx.bin \
- -boot_image isolinux partition_entry=gpt_basdat
+xorriso -as mkisofs -graft-points -b 'boot/grub/i386-pc/eltorito.img' -no-emul-boot -boot-load-size 4 -boot-info-table --grub2-boot-info --grub2-mbr "$WD/chroot/usr/lib/grub/i386-pc/boot_hybrid.img" --efi-boot 'boot/grub/efi.img' -efi-boot-part --efi-boot-image --protective-msdos-label -o "$ISONAME" -r "$WD/image" --sort-weight 0 '/' --sort-weight 1 '/boot'
 
 echo "Calculating SHA-256 HASH of the $ISONAME"
 NEWHASH=$(sha256sum < "${ISONAME}")
