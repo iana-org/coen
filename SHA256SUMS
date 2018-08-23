@@ -1,4 +1,4 @@
-f9fd8d851d5a855cfa97eafe062418fb97e9cb574bab77326e9a34f9e8aa2c98  ./create-iso.sh
+e621b4d47321a0117d5950501324a472dc141d333f651b3f0c6c778998468a7c  ./create-iso.sh
 c93b498e8599dd2368ae92622aee2342a312f84ae216eb2ece659fa9e4864ca3  ./tools/debuerreotype_0.7-1_all.deb
 dbed950a8b2e9c35dd76002e414268697a4b84749625753266c13bfbfa5eccb8  ./tools/hooks/00-install-ksk-packages.sh
 fa97bedd94635866336547f7f5c2aaeff10e8533ed86e4819d3820d8ccb1c862  ./tools/hooks/01-fix-fontconfig-cache.sh
@@ -21,4 +21,4 @@ a8946b779ccf305da8dadefa9d7d9402ccfe756246dd70a251e4375076a83648  ./tools/packag
 a0ae2652c5ca8461752f17ab22aa385c588481351b7b4aeb199a3d23d6479c34  ./tools/packages/libgtk2.0-0_2.24.31-2.0tails1_amd64.deb
 0862890d70bafeb6b4a7a1c1da05c90569e0147522d6526fad6d146d6335b79f  ./tools/packages/libgtk2.0-common_2.24.31-2.0tails1_all.deb
 5c7ab880233139bc213d2ef214dc6c433eac488eaa51f8d59c4eb791fa777293  ./tools/squashfs-tools_4.3-3.0tails4_amd64.deb
-eb66b37b4c0a81285e0c2fa18787b942fdee63a4d1c25cb4343ab50c03d1524a  ./variables.sh
+038998484c1424e5f069d08bb6a9cc6f6b0b0686c4230568504308eeff9a2de0  ./variables.sh
