@@ -34,7 +34,7 @@ This project cannot be possible without:
 - The [Reproducible Builds](https://reproducible-builds.org/) project
 - [Debian as trust anchor](https://wiki.debian.org/ReproducibleBuilds)
 - [Debuerreotype](https://github.com/debuerreotype/debuerreotype) a reproducible, snapshot-based Debian rootfs builder ([License](https://github.com/debuerreotype/debuerreotype/blob/master/LICENSE))
-- (The Amnesic Incognito Live System)[https://tails.boum.org/index.en.html] ([License](https://tails.boum.org/doc/about/license/index.en.html))
+- [The Amnesic Incognito Live System](https://tails.boum.org/index.en.html) ([License](https://tails.boum.org/doc/about/license/index.en.html))
 
 ## Requirements for building the ISO image
 
