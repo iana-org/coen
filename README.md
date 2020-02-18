@@ -51,7 +51,7 @@ Fedora, you will probably have the SELinux security module installed.
 To check your SELinux mode, run `sestatus` and check the output.
 
 If you see **enforcing** or **permissive** on *"Current mode"*, SELinux is
-enabled and enforcing rules or is enable and log rather than enforce errors.
+enabled and enforcing rules or is enabled and log rather than enforce errors.
 
 > **Warning** before proceeding with this, disabling SELinux also disables the
 generation of file contexts so an entire system relabeling is needed afterwards.
@@ -73,7 +73,7 @@ git clone https://github.com/iana-org/coen && \
 cd coen && \
 make all
 ```
-* If you have a error executing `make all` as a non-root user, try to
+* If you have an error executing `make all` as a non-root user, try to
 execute `sudo make all`.
 
 This will build a docker image with the proper environment to build the
