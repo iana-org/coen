@@ -1,26 +1,42 @@
-FROM debian:9.4-slim@sha256:91e111a5c5314bc443be24cf8c0d59f19ffad6b0ea8ef8f54aedd41b8203e3e1
+FROM --platform=linux/amd64 debian:11.2-slim@sha256:125f346eac7055d8e1de1b036b1bd39781be5bad3d36417c109729d71af0cd73
 
 ENV DEBIAN_FRONTEND noninteractive
 
 COPY create-iso.sh .
+COPY uname.sh .
 COPY variables.sh .
 COPY SHA256SUMS .
 COPY tools/ /tools/
+COPY hsm/ /hsm/
 
-RUN sha256sum -c SHA256SUMS
+#RUN sha256sum -c SHA256SUMS
 
 RUN . ./variables.sh && \
     rm -f /etc/apt/sources.list && \
     echo "deb http://snapshot.debian.org/archive/debian/$(date --date "$DATE" '+%Y%m%dT%H%M%SZ') $DIST main" >> /etc/apt/sources.list && \
     echo "deb http://snapshot.debian.org/archive/debian/$(date --date "$DATE" '+%Y%m%dT%H%M%SZ') "$DIST"-updates main" >> /etc/apt/sources.list && \
-    echo "deb http://snapshot.debian.org/archive/debian-security/$(date --date "$DATE" '+%Y%m%dT%H%M%SZ') "$DIST"/updates main" >> /etc/apt/sources.list
+    echo "deb http://snapshot.debian.org/archive/debian-security/$(date --date "$DATE" '+%Y%m%dT%H%M%SZ') "$DIST"-security/updates main" >> /etc/apt/sources.list
 
 RUN apt-get update -o Acquire::Check-Valid-Until=false && \
     apt-get install -o Acquire::Check-Valid-Until=false --no-install-recommends --yes \
-    liblzo2-2 xorriso debootstrap \
-    locales && \
+    docker \
+    liblzo2-2 \
+    xorriso \
+    debootstrap \
+    locales \
+    squashfs-tools \
+    isolinux \
+    syslinux-efi \
+    grub-pc-bin \
+    grub-efi-amd64-bin \    
+    mtools \
+    dosfstools \
+    debuerreotype \
+    vim \
+    strace && \
     sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g' /etc/locale.gen && \
     locale-gen en_US.UTF-8
+ 
 
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
@@ -28,7 +44,7 @@ ENV LC_ALL en_US.UTF-8
 
 RUN dpkg-reconfigure locales
 
-RUN dpkg -i /tools/squashfs-tools_4.3-3.0tails4_amd64.deb && \
-    dpkg -i /tools/debuerreotype_0.7-1_all.deb
+#RUN dpkg -i /tools/squashfs-tools_4.4-2+deb11u2_amd64.deb && \
+#    dpkg -i /tools/debuerreotype_0.9-1_all.deb
 
-CMD ["/create-iso.sh"]
+#CMD ["/create-iso.sh"]

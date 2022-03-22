@@ -1,5 +1,20 @@
 #!/bin/bash
 # Main script for ISO image creation
+#
+###############################################################################
+# PLEASE READ THIS
+#
+# One thing to note if you're ever in the position of having to change this
+# script is that this script runs WITHIN THE CONTEXT OF THE ISO BUILD CONTAINER.
+#
+# It's kind of like Inception.  You type 'make all' at the command line and that
+# generates the ISO build container.  Then this script is run from within the
+# container, and it does a chroot to create the ISO image filesystem, also from
+# within the build container.  But there are some things that run (e.g. apt-get)
+# that would normally be run on the target system itself, so we use debuerreotype
+# to fix that up so those scripts think they're executing from within the
+# context of the target system.
+###############################################################################
 
 set -x   # Print each command before executing it
 set -e   # Exit immediately should a command fail
@@ -18,22 +33,25 @@ debuerreotype-chroot $WD/chroot passwd -d root
 debuerreotype-apt-get $WD/chroot update
 debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false install \
     --no-install-recommends --yes \
-    linux-image-amd64 live-boot systemd-sysv \
+    linux-image-amd64 usbutils live-boot systemd-sysv \
     syslinux syslinux-common isolinux
+
 debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false install \
     --no-install-recommends --yes \
-    iproute2 ifupdown pciutils usbutils dosfstools eject exfat-utils \
+    alien iproute2 ifupdown pciutils usbutils dosfstools eject exfat-utils \
     vim links2 xpdf cups cups-bsd enscript libbsd-dev tree openssl less iputils-ping \
     xserver-xorg-core xserver-xorg xfce4 xfce4-terminal xfce4-panel lightdm system-config-printer \
-    xterm gvfs thunar-volman xfce4-power-manager
+    xterm gvfs thunar-volman xfce4-power-manager \
+    pkcs11-data pkcs11-dump p11-kit linux-headers-generic
 debuerreotype-apt-get $WD/chroot --yes --purge autoremove
 debuerreotype-apt-get $WD/chroot --yes clean
 
 # Applying hooks
-for FIXES in $HOOK_DIR/*
+for FIXES in $HOOK_DIR/*.sh
 do
   $FIXES
 done
+
 
 # Setting network
 echo "coen" > $WD/chroot/etc/hostname
@@ -84,6 +102,48 @@ sed -i --regexp-extended \
     '11s/.*/#&/' \
     $WD/chroot/etc/pam.d/lightdm-autologin
 
+# Verkada specific bits:
+# * Place on the generated ISO all of the PDFs and other documentation relevant for our Thales Luna USB HSM
+# * Install the HSM client software and drivers
+# Copy over HSM documentation and tools, then install software
+mkdir -p $WD/chroot/root/Desktop/hsm
+cp -r $HSM_DIR/* $WD/chroot/root/Desktop/hsm
+# Untar HSM software
+debuerreotype-chroot $WD/chroot tar xvf /root/Desktop/hsm/610-000397-005_SW_Linux_Luna_Client_V10.4.1_RevA.tar -C /root/Desktop/hsm
+# Install Luna HSM software.  Default options are 3 (Luna USB HSM) 1 (SDK)
+# KVER overrides the auto-detected kernel version, which will be the kernel version of the generated Docker container
+# Instead we want it to be the kernel version on the generated ISO
+# The options at the end signify:
+# Install ?  (y)
+# 
+TARGET_KVER=5.10.0-10-amd64
+mv /bin/uname /bin/uname.old
+chmod +x /uname.sh
+cp /uname.sh /bin/uname
+cp /uname.sh /usr/bin/uname
+# Swap out the docker container uname with a bash script which gets invoked during driver compilation + installation
+chmod +x /bin/uname
+echo "Testing uname"
+uname
+# Run the install script and type in installation options:
+# Agree to license? (y)
+# Install Luna USB (3)
+# Next (n)
+# Install Luna SDK (1)
+# Install (i)
+strace -f -e execve,stat -o /tmp/1 debuerreotype-chroot $WD/chroot KVER=${TARGET_KVER} /root/Desktop/hsm/LunaClient_10.4.1-7_Linux/64/install.sh <<EOF
+y
+3
+n
+1
+i
+EOF
+rm /bin/uname
+mv /bin/uname.old /bin/uname
+rm /usr/bin/uname
+cp /bin/uname /usr/bin/uname
+
+
 # Disabling lastlog since autologin is enabled
 sed -i '/^[^#].*pam_lastlog\.so/s/^/# /' $WD/chroot/etc/pam.d/login
 
@@ -102,10 +162,16 @@ EOF
 # Creating boot directories
 mkdir -p $WD/image/live
 mkdir -p $WD/image/isolinux
+mkdir -p $WD/image/EFI/boot
+mkdir -p $WD/image/boot/grub/x86_64-efi
+mkdir -p $WD/tmp
 
 # Copying bootloader
 cp -p $WD/chroot/boot/vmlinuz-* $WD/image/live/vmlinuz
 cp -p $WD/chroot/boot/initrd.img-* $WD/image/live/initrd.img
+
+KERNEL_PARAMS="boot=live locales=en_US.UTF-8 keymap=us language=us net.ifnames=0 timezone=Etc/UTC live-media=removable nopersistence selinux=0 STATICIP=frommedia modprobe.blacklist=pcspkr,hci_uart,btintel,btqca,btbcm,bluetooth,snd_hda_intel,snd_hda_codec_realtek,snd_soc_skl,snd_soc_skl_ipc,snd_soc_sst_ipc,snd_soc_sst_dsp,snd_hda_ext_core,snd_soc_sst_match,snd_soc_core,snd_compress,snd_hda_core,snd_pcm,snd_timer,snd,soundcore,e1000"
+
 
 # Creating the isolinux bootloader
 cat > $WD/image/isolinux/isolinux.cfg << EOF
@@ -120,9 +186,43 @@ label coen-${RELEASE} Live amd64
 menu label ^coen-${RELEASE} amd64
 menu default
 kernel /live/vmlinuz
-append initrd=/live/initrd.img boot=live locales=en_US.UTF-8 keymap=us language=us net.ifnames=0 timezone=Etc/UTC live-media=removable nopersistence selinux=0 STATICIP=frommedia modprobe.blacklist=pcspkr,hci_uart,btintel,btqca,btbcm,bluetooth,snd_hda_intel,snd_hda_codec_realtek,snd_soc_skl,snd_soc_skl_ipc,snd_soc_sst_ipc,snd_soc_sst_dsp,snd_hda_ext_core,snd_soc_sst_match,snd_soc_core,snd_compress,snd_hda_core,snd_pcm,snd_timer,snd,soundcore
+append initrd=/live/initrd.img ${KERNEL_PARAMS}
 
 EOF
+
+# Create GRUB bootloader menu
+cat > $WD/image/boot/grub/grub.cfg <<EOF
+search --set=root --file /COEN
+set superusers=""
+
+set default="0"
+set timeout=30
+
+# If X has issues finding screens, experiment with/without nomodeset.
+
+menuentry "Debian Live [EFI/GRUB]" --unrestricted {
+    insmod all_video
+    linux (\$root)/live/vmlinuz ${KERNEL_PARAMS}
+    initrd (\$root)/live/initrd.img
+}
+
+menuentry "Debian Live [EFI/GRUB] (nomodeset)" --unrestricted {
+    insmod all_video
+    linux (\$root)/live/vmlinuz nomodeset ${KERNEL_PARAMS}
+    initrd (\$root)/live/initrd.img
+}
+EOF
+
+# Create a 3rd boot config, this gets embedded in the EFI partition.  It finds the
+# root and loads main GRUB from there
+cat > $WD/tmp/grub-standalone.cfg <<EOF
+search --set=root --file /COEN
+set prefix=(\$root)/boot/grub/
+configfile /boot/grub/grub.cfg
+EOF
+
+# Helps grub figure out which device contains the live filesystem
+touch $WD/image/COEN
 
 # Coping files for ISO booting
 cp -p $WD/chroot/usr/lib/ISOLINUX/isolinux.bin $WD/image/isolinux/
@@ -136,6 +236,28 @@ cp -p $WD/chroot/usr/lib/syslinux/modules/bios/libcom32.c32 $WD/image/isolinux/
 cp -p $WD/chroot/usr/lib/syslinux/modules/bios/libgpl.c32 $WD/image/isolinux/
 cp -p $WD/chroot/usr/share/misc/pci.ids $WD/image/isolinux/
 
+# Copying files for EFI boot
+cp -r /usr/lib/grub/x86_64-efi/* "$WD/image/boot/grub/x86_64-efi/"
+
+# Generate EFI bootable GRUB image
+grub-mkstandalone \
+    --format=x86_64-efi \
+    --output=$WD/tmp/bootx64.efi \
+    --locales="" \
+    --fonts="" \
+    "boot/grub/grub.cfg=$WD/tmp/grub-standalone.cfg"
+
+# Create FAT16 UEFI bootable image
+(cd $WD/image/EFI/boot && \
+    dd if=/dev/zero of=efiboot.img bs=1M count=20 && \
+    mkfs.vfat efiboot.img && \
+    mmd -i efiboot.img efi efi/boot && \
+    mcopy -vi efiboot.img $WD/tmp/bootx64.efi ::efi/boot/
+)
+
+# Delete the fontconfig cache as it creates random-looking files
+rm -r $WD/chroot/var/cache/fontconfig
+
 # Fixing dates to SOURCE_DATE_EPOCH
 debuerreotype-fixup $WD/chroot
 
@@ -143,7 +265,8 @@ debuerreotype-fixup $WD/chroot
 find "$WD/" -exec touch --no-dereference --date="@$SOURCE_DATE_EPOCH" '{}' +
 
 # Compressing the chroot environment into a squashfs
-mksquashfs $WD/chroot/ $WD/image/live/filesystem.squashfs -comp xz -Xbcj x86 -b 1024K -Xdict-size 1024K -no-exports -processors 1 -no-fragments -wildcards -ef $TOOL_DIR/mksquashfs-excludes
+# nbp: Removed -processors 1 since newer mksquashfs creates reproducible filesystems on multicore systems
+mksquashfs $WD/chroot/ $WD/image/live/filesystem.squashfs -comp xz -Xbcj x86 -b 1024K -Xdict-size 1024K -no-exports -no-fragments -wildcards -ef $TOOL_DIR/mksquashfs-excludes
 
 # Setting permissions for squashfs.img
 chmod 644 $WD/image/live/filesystem.squashfs
@@ -152,10 +275,25 @@ chmod 644 $WD/image/live/filesystem.squashfs
 find "$WD/image/" -exec touch --no-dereference --date="@$SOURCE_DATE_EPOCH" '{}' +
 
 # Creating the iso
-xorriso -outdev $ISONAME -volid COEN \
- -map $WD/image/ / -chmod 0755 / -- -boot_image isolinux dir=/isolinux \
- -boot_image isolinux system_area=$WD/chroot/usr/lib/ISOLINUX/isohdpfx.bin \
- -boot_image isolinux partition_entry=gpt_basdat
+xorriso \
+ -as mkisofs \
+ -iso-level 3 \
+ -o "$ISONAME" \
+ -full-iso9660-filenames \
+ -volid "COEN" \
+ -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
+ -eltorito-boot \
+     isolinux/isolinux.bin \
+     -no-emul-boot \
+     -boot-load-size 4 \
+     -boot-info-table \
+     --eltorito-catalog isolinux/isolinux.cat \
+ -eltorito-alt-boot \
+     -e /EFI/boot/efiboot.img \
+     -no-emul-boot \
+     -isohybrid-gpt-basdat \
+ -append_partition 2 0xef ${WD}/image/EFI/boot/efiboot.img \
+    "${WD}/image"
 
 echo "Calculating SHA-256 HASH of the $ISONAME"
 NEWHASH=$(sha256sum < "${ISONAME}")

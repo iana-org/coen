@@ -1,17 +1,31 @@
 # Ceremony Operating ENvironment (COEN)
 
-COEN is a live operating system consisting of:
+This is Verkada's forked version of ([coen](https://https://github.com/iana-org/coen)).
 
-- A custom Debian GNU/Linux Live CD
-- The [Key Management Tools](https://github.com/iana-org/dnssec-keytools)
-- The AEP Keyper PKCS#11 provider
-- Assorted utilities.
+Verkada's COEN is a minimal live operating system consisting of:
 
-## Reproducible ISO image to make The Root Zone DNSSEC Key Signing Key Ceremony System more Trustworthy
+- A custom Debian 11 GNU/Linux Live CD running XFCE
+- Thales Luna USB HSM documentation, drivers, and utilities
+
+The basic idea is that you clone this repository and run 'make all'.  This generates
+a Docker container, and from within the container, another script runs which
+creates a root filesystem with a minimal Debian 11 operating system + HSM utilities,
+then packages all of that up into a bootable ISO image.
+
+You then burn the ISO image to CD/DVD/BD, and use that Live CD to boot the code signing
+computer in the airgapped Verkada vault.
+
+## Reproducible ISO image to make the OS generation process more trustworthy
 
 This **Reproducible** ISO image provide a verifiable process to obtain the same
-hash every time at build the ISO image to increase the confidence in the DNSSEC Key
-Signing Key (KSK) for the Root Zone.
+hash every time at build.  The generated OS will also verify the same hash and abort
+boot if the hash is different.  This protects us against unwanted or unknown upstream
+changes.
+
+The custom Live image also checks which drivers are loaded, which devices are connected,
+and what the firmware version of the HSM is.  If anything is found to be out of
+specification then the system will alert the user and halt.  This is to protect us against
+signing computer implants, unwarranted software modifications, etc.
 
 ### What are reproducible builds?
 
@@ -69,18 +83,40 @@ SELinux is running within the kernel
 Execute the following commands to build the ISO image:
 
 ```
-git clone https://github.com/iana-org/coen && \
+git clone https://github.com/verkada/coen && \
 cd coen && \
 make all
 ```
-* If you have a error executing `make all` as a non-root user, try to
-execute `sudo make all`.
-
 This will build a docker image with the proper environment to build the
 ISO. Then will run a container executing a bash script to build the ISO and
 if the build succeeded it will copy the resulting ISO into the host directory.
 
 You can execute `make` command to see more options.
+
+## Testing the ISO image
+
+Before burning the ISO to CD/DVD/BD, you might want to test it locally.  The
+easiest and fastest way to do that is to fire it up in QEMU:
+
+```
+qemu-system-x86_64 -boot d -cdrom coen-0.4.0-amd64.iso -m 768 -device qemu-xhci,id=xhci
+```
+
+Note that the above loads the image using ISOLINUX.  You'll probably also want
+to check that it works for UEFI systems (most PCs these days).  Do that with this:
+
+```
+sudo apt-get install ovmf
+qemu-system-x86_64 -boot d -cdrom coen-0.4.0-amd64.iso -bios /usr/share/ovmf/OVMF.fd -m 768 -device qemu-xhci,id=xhci
+```
+
+General things to check for:
+* Errors in dmesg
+* Failed startup messages in systemctl
+
+Please note that QEMU is a good way to test basics like "Does the system boot?",
+"Are the right utilities installed?", "Are user permissions setup correctly?", but
+it cannot check the actual HSM hardware.  Some testing has to be done with real hardware.
 
 ## Contributing
 
@@ -109,6 +145,8 @@ Then, comparing it with the following checksum:
 8105b885b176741d25ef9d391c6a302aed3f6c916093a621a865cb90d560774f  coen-0.4.0-amd64.iso
 ```
 
+
+
 ### If the reproduction failed
 
 Please help us to improve it. You can install `diffoscope` https://diffoscope.org/
@@ -122,5 +160,33 @@ diffoscope \
   path/to/public/coen-0.4.0-amd64.iso \
   path/to/your/coen-0.4.0-amd64.iso
 ```
+
+#### Other techniques
+
+You can try building two different ISOs.  When the hashes are different, look into
+the image as thus:
+
+The most likely differrence is in the root file system. Loopback mount Mount the before
+and after image, and do a filesystem dump of squashFS:
+
+```
+make all
+mv coen-0.4.0-amd64.iso before.iso
+make all
+mv coen-0.4.0-amd64.iso after.iso
+
+mkdir /mnt/iso.before
+mkdir /mnt/iso.after
+mount -o loop before.iso /mnt/iso.before/
+mount -o loop after.iso /mnt/iso.after
+
+
+
+unsquashfs -ll /mnt/iso.before/live/filesystem.squashfs > /tmp/before```
+
+Repeat for the after image:
+
+
+
 Please send us an issue report at https://github.com/iana-org/coen attaching the
 diffoscope.txt file.
