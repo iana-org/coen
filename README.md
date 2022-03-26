@@ -6,6 +6,7 @@ Verkada's COEN is a minimal live operating system consisting of:
 
 - A custom Debian 11 GNU/Linux Live CD running XFCE
 - Thales Luna USB HSM documentation, drivers, and utilities
+- Assorted utilities and whatnot
 
 The basic idea is that you clone this repository and run 'make all'.  This generates
 a Docker container, and from within the container, another script runs which
@@ -161,12 +162,12 @@ diffoscope \
   path/to/your/coen-0.4.0-amd64.iso
 ```
 
-#### Other techniques
+## Debugging Techniques
 
-You can try building two different ISOs.  When the hashes are different, look into
-the image as thus:
+You can try building two different ISOs.  When the hashes between the two are
+different, look into the image as thus:
 
-The most likely differrence is in the root file system. Loopback mount Mount the before
+The most likely differrence is in the root file system. Loopback mount the before
 and after image, and do a filesystem dump of squashFS:
 
 ```
@@ -180,13 +181,43 @@ mkdir /mnt/iso.after
 mount -o loop before.iso /mnt/iso.before/
 mount -o loop after.iso /mnt/iso.after
 
+unsquashfs -ll /mnt/iso.before/live/filesystem.squashfs > /tmp/before
+unsquashfs -ll /mnt/iso.after/live/filesystem.squashfs > /tmp/after
 
+diff /tmp/before /tmp/after
+```
 
-unsquashfs -ll /mnt/iso.before/live/filesystem.squashfs > /tmp/before```
+This helps you find differences in files that are differently sized or
+differently named.  A lot of libraries/utilities create randomly-named
+cache files or UUIDs or similar which can just be deleted.
 
-Repeat for the after image:
+When you get to a place where the hashes still differ and all of the file
+sizes of the before and after root FS are the same and a diff is the same
+then it must be the content that differs.  Use sha256sum to sort it out:
 
+```
+mkdir /mnt/squash.before
+mkdir /mnt/squash.after
+mount /mnt/iso.before/live/filesystem.squashfs /mnt/squash.before
+mount /mnt/iso.after/live/filesystem.squashfs /mnt/squash.after
 
+find /mnt/squash.before -type f -exec sha256sum {} \; > /tmp/hashes.before
+find /mnt/squash.after -type f -exec sha256sum {} \; > /tmp/hashes.after
+
+diff /tmp/hashes.before /tmp/hashes.after
+```
+
+If you still get a match on the individual file hashes but the ISOs themselves
+hash different hashes, it's time to bust out diffoscope and/or your favorite
+hexdump tool and figure out what and where in the ISO image the difference lies.
 
 Please send us an issue report at https://github.com/iana-org/coen attaching the
 diffoscope.txt file.
+
+### Work to do
+
+- [ ] Figure out a better package host than snapshot.debian.org.  This one is rate-limited so you can't pull packages with apt-fast, which increases ISO container build time.
+- [ ] Better handling for download failures.  Right now a single download failure kills the process--super annoying when you have a build in process and you have to go to a meeting.
+- [x] Add UEFI support, to allow for stuff to work on a modern PC.  Original COEN only supported ISOLINUX (non-UEFI) boot.
+- [ ] Blacklist USB mass storage.  This will be added at the end, once the project is stabilized.
+- [ ] Check devices (PCI & USB & HSM) plugged into the system at startup and abort if foreign devices detected.

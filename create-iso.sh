@@ -21,6 +21,7 @@ set -e   # Exit immediately should a command fail
 set -u   # Treat unset variables as an error and exit immediately
 
 source ./variables.sh
+export _MAXNUM=6
 
 # Creating a working directory
 mkdir -p $WD
@@ -30,21 +31,87 @@ debuerreotype-init $WD/chroot $DIST $DATE --arch=$ARCH
 # root without password
 debuerreotype-chroot $WD/chroot passwd -d root
 # Installing all needed packages for COEN
+
+# Allow access to contrib and non-free repos to download AMD graphics firmware blob
+sed -i '${s/$/ contrib non-free/;}' $WD/chroot/etc/apt/sources.list
 debuerreotype-apt-get $WD/chroot update
-debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false install \
+debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get install -o Acquire::Check-Valid-Until=false --no-install-recommends --yes gpg wget ca-certificates aria2
+debuerreotype-chroot $WD/chroot wget https://github.com/ilikenwf/apt-fast/archive/refs/tags/1.9.12.tar.gz && \
+    tar zxvf 1.9.12.tar.gz && \
+    cp apt-fast-1.9.12/apt-fast $WD/chroot/usr/local/sbin/ && \
+    chmod +x $WD/chroot/usr/local/sbin/apt-fast && \
+    cp apt-fast-1.9.12/apt-fast.conf $WD/chroot/etc && \
+    sed -i "{s/#_MAXNUM=5/_MAXNUM=5/;}" $WD/chroot/etc/apt-fast.conf && \
+    sed -i "{s/#_MAXCONPERSRV=10/_MAXCONPERSRV=5/;}" $WD/chroot/etc/apt-fast.conf && \
+    sed -i "{s/#_SPLITCON=8/_SPLITCON=8/;}" $WD/chroot/etc/apt-fast.conf
+
+debuerreotype-apt-get $WD/chroot update
+debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false --option="APT::Acquire::Retries=3" install \
     --no-install-recommends --yes \
     linux-image-amd64 usbutils live-boot systemd-sysv \
     syslinux syslinux-common isolinux
 
-debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false install \
+debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false --option="APT::Acquire::Retries=3" install \
     --no-install-recommends --yes \
-    alien iproute2 ifupdown pciutils usbutils dosfstools eject exfat-utils \
-    vim links2 xpdf cups cups-bsd enscript libbsd-dev tree openssl less iputils-ping \
-    xserver-xorg-core xserver-xorg xfce4 xfce4-terminal xfce4-panel lightdm system-config-printer \
+    alien pciutils usbutils dosfstools eject exfat-utils \
+    lshw vim links2 xpdf tree openssl less \
+    dialog \
+    xserver-xorg-core xserver-xorg xfce4 xfce4-terminal xfce4-panel lightdm \
     xterm gvfs thunar-volman xfce4-power-manager \
     pkcs11-data pkcs11-dump p11-kit linux-headers-generic
+debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -y install firmware-amd-graphics libgl1-mesa-dri libglx-mesa0 mesa-vulkan-drivers xserver-xorg-video-all
 debuerreotype-apt-get $WD/chroot --yes --purge autoremove
 debuerreotype-apt-get $WD/chroot --yes clean
+
+# Display driver
+#mkdir -p $WD/chroot/root/Desktop
+#cp tools/amdgpu-install_21.50.2.50002-1_all.deb $WD/chroot/root/Desktop
+#debuerreotype-chroot $WD/chroot dpkg -i /root/Desktop/amdgpu-install_21.50.2.50002-1_all.deb
+#debuerreotype-chroot $WD/chroot/ DEBIAN_FRONTEND=noninteractive apt-get install --download-only amdgpu-dkms
+
+# Verkada specific bits:
+# * Place on the generated ISO all of the PDFs and other documentation relevant for our Thales Luna USB HSM
+# * Install the HSM client software and drivers
+# Copy over HSM documentation and tools, then install software
+mkdir -p $WD/chroot/root/Desktop/hsm
+cp -r $HSM_DIR/* $WD/chroot/root/Desktop/hsm
+# Untar HSM software
+debuerreotype-chroot $WD/chroot tar xvf /root/Desktop/hsm/610-000397-005_SW_Linux_Luna_Client_V10.4.1_RevA.tar -C /root/Desktop/hsm
+# Install Luna HSM software.  Default options are 3 (Luna USB HSM) 1 (SDK)
+# KVER overrides the auto-detected kernel version, which will be the kernel version of the generated Docker container
+# Instead we want it to be the kernel version on the generated ISO
+# The options at the end signify:
+# Install ?  (y)
+# 
+TARGET_KVER=5.10.0-10-amd64
+#
+# Explainer on uname.sh: The HSM drivers/utils get compiled for the target OS during install, as set by Thales.
+# We use a chroot environment to store the image, but Luna drivers/utils are compiled under the assumption they
+# will execute on the installed system.  There's no cross-compilation or similar support, so I fake out uname by returning
+# the kernel string as it would appear on the signing computer when you boot the ISO.  This is really fragile
+# and sensitive to kernel updates, so be forewarned.
+mv $WD/chroot/bin/uname $WD/chroot/bin/uname.old
+chmod +x /uname.sh
+cp /uname.sh $WD/chroot/bin/uname
+cp /uname.sh $WD/chroot/usr/bin/uname
+
+# Run the install script and type in installation options:
+# Agree to license? (y)
+# Install Luna USB (3)
+# Next (n)
+# Install Luna SDK (1)
+# Install (i)
+#strace -f -e execve,fork -o /tmp/1
+debuerreotype-chroot $WD/chroot KVER=${TARGET_KVER} /root/Desktop/hsm/LunaClient_10.4.1-7_Linux/64/install.sh <<EOF
+y
+3
+n
+1
+i
+EOF
+# Restore old uname
+rm $WD/chroot/bin/uname
+mv $WD/chroot/bin/uname.old $WD/chroot/bin/uname
 
 # Applying hooks
 for FIXES in $HOOK_DIR/*.sh
@@ -54,25 +121,25 @@ done
 
 
 # Setting network
-echo "coen" > $WD/chroot/etc/hostname
+#echo "coen" > $WD/chroot/etc/hostname
 
-cat > $WD/chroot/etc/hosts << EOF
-127.0.0.1       localhost coen
-192.168.0.2     hsm
-EOF
+#cat > $WD/chroot/etc/hosts << EOF
+#127.0.0.1       localhost coen
+#192.168.0.2     hsm
+#EOF
 
-cat > $WD/chroot/etc/network/interfaces.d/coen-network << EOF
-auto lo
-iface lo inet loopback
+#cat > $WD/chroot/etc/network/interfaces.d/coen-network << EOF
+#auto lo
+#iface lo inet loopback
 
-auto eth0
-iface eth0 inet static
-  address 192.168.0.1
-  netmask 255.255.255.0
-EOF
+#auto eth0
+#iface eth0 inet static
+#  address 192.168.0.1
+#  netmask 255.255.255.0
+#EOF
 
 # Profile in .bashrc to work with xfce terminal
-echo "export PATH=:/opt/icann/bin:/opt/Keyper/bin:\$PATH" >> $WD/chroot/root/.bashrc
+echo "export PATH=:/usr/safenet/lunaclient/bin:/opt/icann/bin:/opt/Keyper/bin:\$PATH" >> $WD/chroot/root/.bashrc
 # ls with color
 sed -i -r -e '9s/^#//' \
           -e '10s/^#//' \
@@ -102,46 +169,6 @@ sed -i --regexp-extended \
     '11s/.*/#&/' \
     $WD/chroot/etc/pam.d/lightdm-autologin
 
-# Verkada specific bits:
-# * Place on the generated ISO all of the PDFs and other documentation relevant for our Thales Luna USB HSM
-# * Install the HSM client software and drivers
-# Copy over HSM documentation and tools, then install software
-mkdir -p $WD/chroot/root/Desktop/hsm
-cp -r $HSM_DIR/* $WD/chroot/root/Desktop/hsm
-# Untar HSM software
-debuerreotype-chroot $WD/chroot tar xvf /root/Desktop/hsm/610-000397-005_SW_Linux_Luna_Client_V10.4.1_RevA.tar -C /root/Desktop/hsm
-# Install Luna HSM software.  Default options are 3 (Luna USB HSM) 1 (SDK)
-# KVER overrides the auto-detected kernel version, which will be the kernel version of the generated Docker container
-# Instead we want it to be the kernel version on the generated ISO
-# The options at the end signify:
-# Install ?  (y)
-# 
-TARGET_KVER=5.10.0-10-amd64
-mv /bin/uname /bin/uname.old
-chmod +x /uname.sh
-cp /uname.sh /bin/uname
-cp /uname.sh /usr/bin/uname
-# Swap out the docker container uname with a bash script which gets invoked during driver compilation + installation
-chmod +x /bin/uname
-echo "Testing uname"
-uname
-# Run the install script and type in installation options:
-# Agree to license? (y)
-# Install Luna USB (3)
-# Next (n)
-# Install Luna SDK (1)
-# Install (i)
-strace -f -e execve,stat -o /tmp/1 debuerreotype-chroot $WD/chroot KVER=${TARGET_KVER} /root/Desktop/hsm/LunaClient_10.4.1-7_Linux/64/install.sh <<EOF
-y
-3
-n
-1
-i
-EOF
-rm /bin/uname
-mv /bin/uname.old /bin/uname
-rm /usr/bin/uname
-cp /bin/uname /usr/bin/uname
 
 
 # Disabling lastlog since autologin is enabled
@@ -257,6 +284,9 @@ grub-mkstandalone \
 
 # Delete the fontconfig cache as it creates random-looking files
 rm -r $WD/chroot/var/cache/fontconfig
+
+# Delete the manpage cache as it creates non-reproducible builds
+rm -rf $WD/chroot/var/cache/man
 
 # Fixing dates to SOURCE_DATE_EPOCH
 debuerreotype-fixup $WD/chroot

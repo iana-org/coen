@@ -18,6 +18,16 @@ RUN . ./variables.sh && \
     echo "deb http://snapshot.debian.org/archive/debian-security/$(date --date "$DATE" '+%Y%m%dT%H%M%SZ') "$DIST"-security/updates main" >> /etc/apt/sources.list
 
 RUN apt-get update -o Acquire::Check-Valid-Until=false && \
+    apt-get install -o Acquire::Check-Valid-Until=false --no-install-recommends --yes gpg wget ca-certificates aria2
+
+RUN wget https://github.com/ilikenwf/apt-fast/archive/refs/tags/1.9.12.tar.gz && \
+    tar zxvf 1.9.12.tar.gz && \
+    cp apt-fast-1.9.12/apt-fast /usr/local/sbin/ && \
+    chmod +x /usr/local/sbin/apt-fast && \
+    cp apt-fast-1.9.12/apt-fast.conf /etc
+
+
+RUN apt-get update -o Acquire::Check-Valid-Until=false && \
     apt-get install -o Acquire::Check-Valid-Until=false --no-install-recommends --yes \
     docker \
     liblzo2-2 \
