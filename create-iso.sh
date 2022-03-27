@@ -53,7 +53,7 @@ debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquir
 
 debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false --option="APT::Acquire::Retries=3" install \
     --no-install-recommends --yes \
-    alien pciutils usbutils dosfstools eject exfat-utils \
+    iproute2 ifupdown alien pciutils usbutils dosfstools eject exfat-utils \
     lshw vim links2 xpdf tree openssl less \
     dialog \
     xserver-xorg-core xserver-xorg xfce4 xfce4-terminal xfce4-panel lightdm \
@@ -121,22 +121,21 @@ done
 
 
 # Setting network
-#echo "coen" > $WD/chroot/etc/hostname
+echo "coen" > $WD/chroot/etc/hostname
 
-#cat > $WD/chroot/etc/hosts << EOF
-#127.0.0.1       localhost coen
-#192.168.0.2     hsm
-#EOF
+cat > $WD/chroot/etc/hosts << EOF
+127.0.0.1       localhost coen
+EOF
 
-#cat > $WD/chroot/etc/network/interfaces.d/coen-network << EOF
-#auto lo
-#iface lo inet loopback
+cat > $WD/chroot/etc/network/interfaces.d/coen-network << EOF
+auto lo
+iface lo inet loopback
 
-#auto eth0
-#iface eth0 inet static
-#  address 192.168.0.1
-#  netmask 255.255.255.0
-#EOF
+auto eth0
+iface eth0 inet static
+  address 192.168.0.1
+  netmask 255.255.255.0
+EOF
 
 # Profile in .bashrc to work with xfce terminal
 echo "export PATH=:/usr/safenet/lunaclient/bin:/opt/icann/bin:/opt/Keyper/bin:\$PATH" >> $WD/chroot/root/.bashrc

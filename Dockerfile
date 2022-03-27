@@ -57,4 +57,4 @@ RUN dpkg-reconfigure locales
 #RUN dpkg -i /tools/squashfs-tools_4.4-2+deb11u2_amd64.deb && \
 #    dpkg -i /tools/debuerreotype_0.9-1_all.deb
 
-#CMD ["/create-iso.sh"]
+CMD ["/create-iso.sh"]

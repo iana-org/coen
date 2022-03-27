@@ -20,6 +20,7 @@ run:
 	docker run -i -t \
 	--privileged \
 	--name=coen \
+	--hostname=coen-builder \
 	coen:$(RELEASE)
 
 copy:

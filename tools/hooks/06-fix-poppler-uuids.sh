@@ -34,7 +34,8 @@ UUIDS=("0f0c26df-7d17-477a-8ab7-dc18171d51d3" \
 UUID_INDEX=0
 
 # Search for .uuid files in poppler directory, replace the UUID with the canned version
-files=`debuerreotype-chroot $WD/chroot find "/usr/share/poppler/cMap/" "/usr/share/fonts" "/usr/local/share/fonts" -name ".uuid"`
+# "/usr/share/poppler/cMap/"
+files=`debuerreotype-chroot $WD/chroot find "/usr/share/fonts" "/usr/local/share/fonts" -name ".uuid"`
 echo "****Replacing UUIDs"
 for f in $files; do
 	echo $WD/chroot/$f
