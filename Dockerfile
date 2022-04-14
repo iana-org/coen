@@ -14,6 +14,7 @@ COPY hsm/ /hsm/
 RUN . ./variables.sh && \
     rm -f /etc/apt/sources.list && \
     echo "deb http://snapshot.debian.org/archive/debian/$(date --date "$DATE" '+%Y%m%dT%H%M%SZ') $DIST main" >> /etc/apt/sources.list && \
+    echo "deb-src http://snapshot.debian.org/archive/debian/$(date --date "$DATE" '+%Y%m%dT%H%M%SZ') $DIST main" >> /etc/apt/sources.list && \
     echo "deb http://snapshot.debian.org/archive/debian/$(date --date "$DATE" '+%Y%m%dT%H%M%SZ') "$DIST"-updates main" >> /etc/apt/sources.list && \
     echo "deb http://snapshot.debian.org/archive/debian-security/$(date --date "$DATE" '+%Y%m%dT%H%M%SZ') "$DIST"-security/updates main" >> /etc/apt/sources.list
 
@@ -57,4 +58,5 @@ RUN dpkg-reconfigure locales
 #RUN dpkg -i /tools/squashfs-tools_4.4-2+deb11u2_amd64.deb && \
 #    dpkg -i /tools/debuerreotype_0.9-1_all.deb
 
-CMD ["/create-iso.sh"]
+CMD [ "/create-iso.sh" ]
+#CMD [ "/bin/bash" ]

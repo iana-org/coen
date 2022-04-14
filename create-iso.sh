@@ -32,8 +32,16 @@ debuerreotype-init $WD/chroot $DIST $DATE --arch=$ARCH
 debuerreotype-chroot $WD/chroot passwd -d root
 # Installing all needed packages for COEN
 
+cp $WD/chroot/etc/apt/sources.list /tmp/sources.list.1
+cp $WD/chroot/etc/apt/sources.list /tmp/sources.list.2
 # Allow access to contrib and non-free repos to download AMD graphics firmware blob
-sed -i '${s/$/ contrib non-free/;}' $WD/chroot/etc/apt/sources.list
+sed -i '${s/$/ contrib non-free/;}' /tmp/sources.list.1
+cp /tmp/sources.list.1 $WD/chroot/etc/apt/sources.list
+# Also include source packages
+sed -i 's/^deb/deb-src/g' /tmp/sources.list.2
+cat /tmp/sources.list.2 >> $WD/chroot/etc/apt/sources.list
+
+# Install needed packages
 debuerreotype-apt-get $WD/chroot update
 debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get install -o Acquire::Check-Valid-Until=false --no-install-recommends --yes gpg wget ca-certificates aria2
 debuerreotype-chroot $WD/chroot wget https://github.com/ilikenwf/apt-fast/archive/refs/tags/1.9.12.tar.gz && \
@@ -54,20 +62,36 @@ debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquir
 debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false --option="APT::Acquire::Retries=3" install \
     --no-install-recommends --yes \
     iproute2 ifupdown alien pciutils usbutils dosfstools eject exfat-utils \
-    lshw vim links2 xpdf tree openssl less \
-    dialog \
+    lshw vim links2 xpdf tree openssl libssl-dev less procps efibootmgr strace \
+    dialog curl lsb-release iptables \
     xserver-xorg-core xserver-xorg xfce4 xfce4-terminal xfce4-panel lightdm \
     xterm gvfs thunar-volman xfce4-power-manager \
-    pkcs11-data pkcs11-dump p11-kit linux-headers-generic
+    pkcs11-data pkcs11-dump p11-kit gnutls-bin opensc linux-headers-generic
+debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false --option="APT::Acquire::Retries=3" source openssl
 debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -y install firmware-amd-graphics libgl1-mesa-dri libglx-mesa0 mesa-vulkan-drivers xserver-xorg-video-all
 debuerreotype-apt-get $WD/chroot --yes --purge autoremove
 debuerreotype-apt-get $WD/chroot --yes clean
+# Install docker
+debuerreotype-chroot $WD/chroot wget https://download.docker.com/linux/debian/dists/bullseye/pool/stable/amd64/containerd.io_1.5.11-1_amd64.deb -P /root
+debuerreotype-chroot $WD/chroot wget https://download.docker.com/linux/debian/dists/bullseye/pool/stable/amd64/docker-ce-cli_20.10.14~3-0~debian-bullseye_amd64.deb -P /root
+debuerreotype-chroot $WD/chroot wget https://download.docker.com/linux/debian/dists/bullseye/pool/stable/amd64/docker-ce-rootless-extras_20.10.14~3-0~debian-bullseye_amd64.deb -P /root
+debuerreotype-chroot $WD/chroot wget https://download.docker.com/linux/debian/dists/bullseye/pool/stable/amd64/docker-ce_20.10.14~3-0~debian-bullseye_amd64.deb -P /root
+debuerreotype-chroot $WD/chroot wget https://download.docker.com/linux/debian/dists/bullseye/pool/stable/amd64/docker-compose-plugin_2.3.3~debian-bullseye_amd64.deb -P /root
+debuerreotype-chroot $WD/chroot wget https://download.docker.com/linux/debian/dists/bullseye/pool/stable/amd64/docker-scan-plugin_0.17.0~debian-bullseye_amd64.deb -P /root
+debuerreotype-chroot $WD/chroot dpkg -i /root/containerd.io_1.5.11-1_amd64.deb 
+debuerreotype-chroot $WD/chroot dpkg -i /root/docker-ce-cli_20.10.14~3-0~debian-bullseye_amd64.deb
+debuerreotype-chroot $WD/chroot dpkg -i /root/docker-ce_20.10.14~3-0~debian-bullseye_amd64.deb
 
 # Display driver
 #mkdir -p $WD/chroot/root/Desktop
 #cp tools/amdgpu-install_21.50.2.50002-1_all.deb $WD/chroot/root/Desktop
 #debuerreotype-chroot $WD/chroot dpkg -i /root/Desktop/amdgpu-install_21.50.2.50002-1_all.deb
 #debuerreotype-chroot $WD/chroot/ DEBIAN_FRONTEND=noninteractive apt-get install --download-only amdgpu-dkms
+
+# Create mount points for USB, SD
+mkdir -p $WD/chroot/mnt/usb
+mkdir -p $WD/chroot/mnt/sd
+echo "/dev/sdb1	/mnt/usb	vfat	ro,noexec,noauto	0	0" >> $WD/chroot/etc/fstab
 
 # Verkada specific bits:
 # * Place on the generated ISO all of the PDFs and other documentation relevant for our Thales Luna USB HSM
@@ -112,6 +136,24 @@ EOF
 # Restore old uname
 rm $WD/chroot/bin/uname
 mv $WD/chroot/bin/uname.old $WD/chroot/bin/uname
+
+# Install GEMEngine, which is the openssl engine for the HSM
+debuerreotype-chroot $WD/chroot tar xvf /root/Desktop/hsm/610-012987-004_SW_OPENSSL_TOOLKIT_GemEngine_v1.4_RevA.tar -C /root/Desktop/hsm
+cp $WD/chroot/root/Desktop/hsm/gemengine-1.4/builds/linux/debian/64/1.1.1/sautil $WD/chroot/usr/local/bin
+chmod +x $WD/chroot/usr/local/bin/sautil
+cp $WD/chroot/root/Desktop/hsm/gemengine-1.4/builds/linux/debian/64/1.1.1/gem.so $WD/chroot/usr/lib/x86_64-linux-gnu/engines-1.1
+# Configure openssl engines to support gem
+cat > /tmp/newsection << EOF
+engines = engine_section
+
+[ engine_section ]
+gem = gem_section
+
+[ gem_section ]
+dynamic_path = /usr/lib/x86_64-linux-gnu/engines-1.1/gem.so
+EOF
+sed -i '/ssl_conf = ssl_sect/r /tmp/newsection' $WD/chroot/etc/ssl/openssl.cnf
+chmod +x $WD/chroot/usr/local/bin/sautil
 
 # Applying hooks
 for FIXES in $HOOK_DIR/*.sh
