@@ -12,20 +12,33 @@ mkdir -p $WD
 
 # Setting up the base Debian rootfs environment
 debuerreotype-init $WD/chroot $DIST $DATE --arch=$ARCH
-# root without password
-debuerreotype-chroot $WD/chroot passwd -d root
-# Installing all needed packages for COEN
+
+echo "Calculating SHA-256 HASH of the rootfs-init"
+ROOTFSINITHASH=$(debuerreotype-tar "${WD}"/chroot - | sha256sum)
+  if [ "$ROOTFSINITHASH" != "$ROOTFS_INIT_SHASUM" ]
+    then
+      echo "Warning: SHA-256 hashes do not match. Reproduction of the rootfs-init failed"
+      echo "Continuing..."
+  else
+      echo "Successfully reproduced rootfs-init"
+  fi
+
+# Installing all required packages for COEN
 debuerreotype-apt-get $WD/chroot update
+
+# copying distro packages
+cp $DISTRO_DIR/*.deb $WD/chroot/var/cache/apt/archives/
+
 debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false install \
     --no-install-recommends --yes \
-    linux-image-amd64 live-boot systemd-sysv \
-    syslinux syslinux-common isolinux
-debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false install \
-    --no-install-recommends --yes \
+    linux-image-$ARCH live-boot systemd-sysv \
+    grub-common grub-pc-bin grub-efi-amd64-bin \
     iproute2 ifupdown pciutils usbutils dosfstools eject exfat-utils \
     vim links2 xpdf cups cups-bsd enscript libbsd-dev tree openssl less iputils-ping \
     xserver-xorg-core xserver-xorg xfce4 xfce4-terminal xfce4-panel lightdm system-config-printer \
-    xterm gvfs thunar-volman xfce4-power-manager
+    xterm gvfs thunar-volman xfce4-power-manager exfat-fuse unzip locales \
+    xsltproc libxml2-utils \
+    libengine-pkcs11-openssl opensc opensc-pkcs11 python3
 debuerreotype-apt-get $WD/chroot --yes --purge autoremove
 debuerreotype-apt-get $WD/chroot --yes clean
 
@@ -35,7 +48,10 @@ do
   $FIXES
 done
 
-# Setting network
+# root without password
+debuerreotype-chroot $WD/chroot passwd -d root
+
+# Configuring network
 echo "coen" > $WD/chroot/etc/hostname
 
 cat > $WD/chroot/etc/hosts << EOF
@@ -60,6 +76,10 @@ sed -i -r -e '9s/^#//' \
           -e '10s/^#//' \
           -e '11s/^#//' \
     $WD/chroot/root/.bashrc
+# Set HSM environment
+egrep -v '^\s*(#|$)' $WD/chroot/opt/dnssec/fixenv >> $WD/chroot/root/.bashrc
+# Set the correct locale
+echo "export LC_ALL=${LOCALE_LC_ALL}" >> $WD/chroot/root/.bashrc
 
 # Configure autologin
 for NUMBER in $(seq 1 6)
@@ -84,13 +104,13 @@ sed -i --regexp-extended \
     '11s/.*/#&/' \
     $WD/chroot/etc/pam.d/lightdm-autologin
 
-# Disabling lastlog since autologin is enabled
+# Disabling lastlog because autologin is enabled
 sed -i '/^[^#].*pam_lastlog\.so/s/^/# /' $WD/chroot/etc/pam.d/login
 
-# Making sure that the xscreensaver is off
+# Ensure that the xscreensaver is off
 rm -f $WD/chroot/etc/xdg/autostart/xscreensaver.desktop
 
-# Defining mount point /media/ for HSMFD, HSMFD1 and KSRFD
+# Defining mount point /media/ for HSMFD, HSMFD1, and KSRFD
 cat > $WD/chroot/etc/udev/rules.d/99-udisks2.rules << EOF
 # UDISKS_FILESYSTEM_SHARED
 # ==1: mount filesystem to a shared directory (/media/VolumeName)
@@ -101,68 +121,82 @@ EOF
 
 # Creating boot directories
 mkdir -p $WD/image/live
-mkdir -p $WD/image/isolinux
+mkdir -p $WD/image/boot/grub
+mkdir -p $WD/image/efi/boot
 
 # Copying bootloader
-cp -p $WD/chroot/boot/vmlinuz-* $WD/image/live/vmlinuz
-cp -p $WD/chroot/boot/initrd.img-* $WD/image/live/initrd.img
+cp -p $WD/chroot/boot/vmlinuz-* $WD/image/boot/vmlinuz
+cp -p $WD/chroot/boot/initrd.img-* $WD/image/boot/initrd.img
 
-# Creating the isolinux bootloader
-cat > $WD/image/isolinux/isolinux.cfg << EOF
-UI menu.c32
+# Creating the GRUB configuration
+cp -a $WD/chroot/usr/lib/grub/i386-pc $WD/image/boot/grub/i386-pc
+cp -a $WD/chroot/usr/lib/grub/x86_64-efi $WD/image/boot/grub/x86_64-efi
 
-prompt 0
-menu title coen-${RELEASE}
+cat > $WD/image/boot/grub/grub.cfg << EOF
 
-timeout 1
+set timeout=1
 
-label coen-${RELEASE} Live amd64
-menu label ^coen-${RELEASE} amd64
-menu default
-kernel /live/vmlinuz
-append initrd=/live/initrd.img boot=live locales=en_US.UTF-8 keymap=us language=us net.ifnames=0 timezone=Etc/UTC live-media=removable nopersistence selinux=0 STATICIP=frommedia modprobe.blacklist=pcspkr,hci_uart,btintel,btqca,btbcm,bluetooth,snd_hda_intel,snd_hda_codec_realtek,snd_soc_skl,snd_soc_skl_ipc,snd_soc_sst_ipc,snd_soc_sst_dsp,snd_hda_ext_core,snd_soc_sst_match,snd_soc_core,snd_compress,snd_hda_core,snd_pcm,snd_timer,snd,soundcore
+menuentry "coen-${RELEASE} ${ARCH}" {
+	linux	/boot/vmlinuz  boot=live locales=${LOCALE_LC_ALL} keymap=us language=us net.ifnames=0 timezone=Etc/UTC live-media=removable nopersistence selinux=0 STATICIP=frommedia modprobe.blacklist=pcspkr,hci_uart,btintel,btqca,btbcm,bluetooth,snd_hda_intel,snd_hda_codec_realtek,snd_soc_skl,snd_soc_skl_ipc,snd_soc_sst_ipc,snd_soc_sst_dsp,snd_hda_ext_core,snd_soc_sst_match,snd_soc_core,snd_compress,snd_hda_core,snd_pcm,snd_timer,snd,soundcore
+	initrd	/boot/initrd.img
+}
 
 EOF
 
-# Coping files for ISO booting
-cp -p $WD/chroot/usr/lib/ISOLINUX/isolinux.bin $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/ISOLINUX/isohdpfx.bin $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/menu.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/hdt.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/ldlinux.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/libutil.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/libmenu.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/libcom32.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/lib/syslinux/modules/bios/libgpl.c32 $WD/image/isolinux/
-cp -p $WD/chroot/usr/share/misc/pci.ids $WD/image/isolinux/
+# Creating GRUB images
+grub-mkimage --directory "$WD/chroot/usr/lib/grub/i386-pc" --prefix '/boot/grub' --output "$WD/image/boot/grub/i386-pc/eltorito.img" --format 'i386-pc-eltorito' --compression 'auto'  --config "$WD/image/boot/grub/grub.cfg" 'biosdisk' 'iso9660'
+grub-mkimage --directory "$WD/chroot/usr/lib/grub/x86_64-efi" --prefix '()/boot/grub' --output "$WD/image/efi/boot/bootx64.efi" --format 'x86_64-efi' --compression 'auto'  --config "$WD/image/boot/grub/grub.cfg" 'part_gpt' 'part_msdos' 'fat' 'part_apple' 'iso9660'
 
-# Fixing dates to SOURCE_DATE_EPOCH
+# Creating EFI boot image
+mformat -C -f 2880 -L 16 -N 0 -i "$WD/image/boot/grub/efi.img" ::.
+mcopy -s -i "$WD/image/boot/grub/efi.img" "$WD/image/efi" ::/.
+
+# Setting dates to SOURCE_DATE_EPOCH
 debuerreotype-fixup $WD/chroot
 
-# Fixing main folder timestamps to SOURCE_DATE_EPOCH
+# Setting main folder timestamps to SOURCE_DATE_EPOCH
 find "$WD/" -exec touch --no-dereference --date="@$SOURCE_DATE_EPOCH" '{}' +
 
-# Compressing the chroot environment into a squashfs
-mksquashfs $WD/chroot/ $WD/image/live/filesystem.squashfs -comp xz -Xbcj x86 -b 1024K -Xdict-size 1024K -no-exports -processors 1 -no-fragments -wildcards -ef $TOOL_DIR/mksquashfs-excludes
+echo "Calculating SHA-256 HASH of the rootfs-final"
+ROOTFSFINALHASH=$(debuerreotype-tar "${WD}"/chroot - | sha256sum)
+  if [ "$ROOTFSFINALHASH" != "$ROOTFS_FINAL_SHASUM" ]
+    then
+      echo "ERROR: SHA-256 hashes do not match. Reproduction of the rootfs-final failed"
+      echo "Please check the README file, then try again"
+      exit 1
+  else
+      echo "Successfully reproduced rootfs-final"
+  fi
+
+# Compressing the chroot environment into squashfs
+mksquashfs $WD/chroot/ $WD/image/live/filesystem.squashfs -reproducible -comp xz -Xbcj x86 -b 1024K -Xdict-size 1024K -no-exports -no-fragments -wildcards -ef $TOOL_DIR/mksquashfs-excludes
 
 # Setting permissions for squashfs.img
 chmod 644 $WD/image/live/filesystem.squashfs
 
-# Fixing squashfs folder timestamps to SOURCE_DATE_EPOCH
+# Setting squashfs folder timestamps to SOURCE_DATE_EPOCH
 find "$WD/image/" -exec touch --no-dereference --date="@$SOURCE_DATE_EPOCH" '{}' +
 
+echo "Calculating SHA-256 HASH of the squashfs"
+SQUASHFSHASH=$(sha256sum < "${WD}"/image/live/filesystem.squashfs)
+  if [ "$SQUASHFSHASH" != "$SQUASHFS_SHASUM" ]
+    then
+      echo "ERROR: SHA-256 hashes do not match. Reproduction of the squashfs failed"
+      echo "Please check the README file, then try again"
+      exit 1
+  else
+      echo "Successfully reproduced squashfs"
+  fi
+
 # Creating the iso
-xorriso -outdev $ISONAME -volid COEN \
- -map $WD/image/ / -chmod 0755 / -- -boot_image isolinux dir=/isolinux \
- -boot_image isolinux system_area=$WD/chroot/usr/lib/ISOLINUX/isohdpfx.bin \
- -boot_image isolinux partition_entry=gpt_basdat
+xorriso -as mkisofs -graft-points -b 'boot/grub/i386-pc/eltorito.img' -no-emul-boot -boot-load-size 4 -boot-info-table --grub2-boot-info --grub2-mbr "$WD/chroot/usr/lib/grub/i386-pc/boot_hybrid.img" --efi-boot 'boot/grub/efi.img' -efi-boot-part --efi-boot-image --protective-msdos-label -o "$ISONAME" -r "$WD/image" --sort-weight 0 '/' --sort-weight 1 '/boot'
 
 echo "Calculating SHA-256 HASH of the $ISONAME"
-NEWHASH=$(sha256sum < "${ISONAME}")
-  if [ "$NEWHASH" != "$SHASUM" ]
+ISOHASH=$(sha256sum < "${ISONAME}")
+  if [ "$ISOHASH" != "$ISO_SHASUM" ]
     then
-      echo "ERROR: SHA-256 hashes mismatched reproduction failed"
-      echo "Please send us an issue report: https://github.com/iana-org/coen"
+      echo "ERROR: SHA-256 hashes do not match. Reproduction of the iso failed"
+      echo "Please check the README file, then try again"
   else
       echo "Successfully reproduced coen-${RELEASE}"
   fi

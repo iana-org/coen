@@ -1,126 +1,100 @@
-# Ceremony Operating ENvironment (COEN)
+# Ceremony Operating ENvironment (COEN)<!-- omit in toc -->
 
 COEN is a live operating system consisting of:
 
 - A custom Debian GNU/Linux Live CD
-- The [Key Management Tools](https://github.com/iana-org/dnssec-keytools)
-- The AEP Keyper PKCS#11 provider
-- Assorted utilities.
+- [Key Management Tools: Legacy](https://github.com/iana-org/dnssec-keytools-legacy)
+- [Key Management Tools](https://github.com/iana-org/dnssec-keytools) 
+- The AEP Keyper PKCS#11 library
+- Assorted utilities
 
-## Reproducible ISO image to make The Root Zone DNSSEC Key Signing Key Ceremony System more Trustworthy
+## Table of Contents<!-- omit in toc -->
+- [Reproducible COEN ISO image to enhance Root Zone DNSSEC Key Signing Key ceremony trustworthiness](#reproducible-coen-iso-image-to-enhance-root-zone-dnssec-key-signing-key-ceremony-trustworthiness)
+  - [What are reproducible builds?](#what-are-reproducible-builds)
+- [Acknowledgments](#acknowledgments)
+- [Requirements for building the COEN ISO image](#requirements-for-building-the-coen-iso-image)
+  - [Disabling SELinux](#disabling-selinux)
+- [Building the COEN ISO image](#building-the-coen-iso-image)
+- [Tested Platforms](#tested-platforms)
 
-This **Reproducible** ISO image provide a verifiable process to obtain the same
-hash every time at build the ISO image to increase the confidence in the DNSSEC Key
-Signing Key (KSK) for the Root Zone.
+
+## Reproducible COEN ISO image to enhance Root Zone DNSSEC Key Signing Key ceremony trustworthiness
+
+The **reproducible** COEN ISO image provides a verifiable process to generate the same hash any time the COEN ISO image is built, which consequently increases trustworthiness in the DNSSEC Key Signing Key (KSK).
 
 ### What are reproducible builds?
 
 Quoted from https://reproducible-builds.org
 
-> Reproducible builds are a set of software development practices that create a
-verifiable path from human readable source code to the binary code used by
-computers.
->
-> Most aspects of software verification are done on source code, as that is what
-humans can reasonably understand. But most of the time, computers require
-software to be first built into a long string of numbers to be used. With
-reproducible builds, multiple parties can redo this process independently and
-ensure they all get exactly the same result. We can thus gain confidence that a
-distributed binary code is indeed coming from a given source code.
+> Reproducible builds are a set of software development practices that create an independently-verifiable path from source to binary code.
+
+> The motivation behind the **Reproducible Builds** project is therefore to allow verification that no vulnerabilities or backdoors have been introduced during this compilation process. By promising identical results are always generated from a given source, this allows multiple third parties to come to a consensus on a "correct" result, highlighting any deviations as suspect and worthy of scrutiny.
 
 ## Acknowledgments
 
-This project cannot be possible without:
+This project is made possibly by:
 - The [Reproducible Builds](https://reproducible-builds.org/) project
-- [Debian as trust anchor](https://wiki.debian.org/ReproducibleBuilds)
+- [Debian serving as trust anchor](https://www.debian.org/)
 - [Debuerreotype](https://github.com/debuerreotype/debuerreotype) a reproducible, snapshot-based Debian rootfs builder ([License](https://github.com/debuerreotype/debuerreotype/blob/master/LICENSE))
-- (The Amnesic Incognito Live System)[https://tails.boum.org/index.en.html] ([License](https://tails.boum.org/doc/about/license/index.en.html))
+- [The Amnesic Incognito Live System](https://tails.boum.org/index.en.html) ([License](https://tails.boum.org/doc/about/license/index.en.html))
 
-## Requirements for building the ISO image
+## Requirements for building the COEN ISO image
 
-Building the ISO image requires:
+> **Warning**: In order to generate a reproducible COEN ISO with a matching hash, Docker/Podman requires administrator privileges, and suppressing container and operating system security protections. Consequently, testing should occur in a suitable environment.
 
-* [Docker](https://www.docker.com/). The recommended Docker version is 18.03.
-* SELinux to be disabled. SELinux must be completely disabled rather than with **permissive mode** since the behave is differently.
+To build the COEN ISO image:
+
+* Use [Docker](https://www.docker.com/) (recommended) or alternatively [Podman](https://podman.io/)
+* Execute commands as administrator, root, or with `sudo`  
+* Execute container with full capabilities `--privileged` which is required during ISO generation to mount/share, create device nodes, chroot into the new rootfs, and disable security kernel protections e.g. AppArmor and SELinux
+* Completely disable SELinux rather than operating with **permissive mode** because the generated image will not be reproducible otherwise. In addition, `--privilege` mode reportedly disables SELinux with `--security-opt label=disable`, but in testing, without manually disabling SELinux prior to ISO generation including a restart to reload the kernel, the resulting ISO will not match the hash. The differences with SELinux enabled are benign, but obviously result in a different hash
 
 ### Disabling SELinux
 
-If you are running a Red Hat based distribution, including RHEL, CentOS and
-Fedora, you will probably have the SELinux security module installed.
+If you are running a Red Hat based distribution, including RHEL, CentOS, and Fedora, it is likely the SELinux security module is installed.
 
-To check your SELinux mode, run `sestatus` and check the output.
+Execute `sestatus` and check the output for the current SELinux mode.
 
-If you see **enforcing** or **permissive** on *"Current mode"*, SELinux is
-enabled and enforcing rules or is enable and log rather than enforce errors.
+If you see **enforcing** or **permissive** for *"Current mode"*, SELinux is
+enabled and enforcing rules or is enabled and logging rather than enforcing errors.
 
-> **Warning** before proceeding with this, disabling SELinux also disables the
-generation of file contexts so an entire system relabeling is needed afterwards.
+> **Note**: before proceeding, be aware disabling SELinux also disables the
+generation of file contexts, so an entire system relabeling is required if SELinux is enabled again.
 
 To disable SELinux:
 
-- Edit `/etc/sysconfig/selinux` or `/etc/selinux/config` depending of your distro
-- Set the `SELINUX` parameter to `disabled`
+- Edit `/etc/sysconfig/selinux` or `/etc/selinux/config` depending on your distribution
+- Set the `SELinux` parameter to `disabled`
 - For the changes to take effect, you need to **reboot** the machine, since
 SELinux is running within the kernel
-- Check the status of SELinux using `sestatus` command
+- Check the status of SELinux using the `sestatus` command
 
-## Building the ISO image
+## Building the COEN ISO image
 
-Execute the following commands to build the ISO image:
+Run `make` to see the execution options.
 
-```
-git clone https://github.com/iana-org/coen && \
-cd coen && \
-make all
-```
-* If you have a error executing `make all` as a non-root user, try to
-execute `sudo make all`.
+Running `make all` or `make podman-all` will build a container image in Docker or Podman. Then, a container will execute a bash script to build the COEN ISO, and if the build succeeds, the resulting COEN ISO will be copied into the host directory.
 
-This will build a docker image with the proper environment to build the
-ISO. Then will run a container executing a bash script to build the ISO and
-if the build succeeded it will copy the resulting ISO into the host directory.
+If permission errors are encountered executing `make all` or `make podman-all` as a non-root user, try `sudo make all` or `sudo make podman-all`
 
-You can execute `make` command to see more options.
-
-## Contributing
-
-### If the build failed
-
-Please send us an issue report at https://github.com/iana-org/coen with the error
-that is displayed in your terminal window.
-
-### If the reproduction succeeded
-
-Congrats for successfully reproducing the ISO image!
-
-You can compute the SHA-256 checksum of the resulting ISO image by yourself:
+Final hash result should match with the following:
 
 ```
-sha256sum coen-0.4.0-amd64.iso
-```
-or
-```
-shasum -a 256 coen-0.4.0-amd64.iso
+405d7c76c114feb93fcc5345e13850e59d86341a08161207d8eb8c395410c13a  coen-1.0.0-amd64.iso
 ```
 
-Then, comparing it with the following checksum:
+## Tested Platforms
 
-```
-8105b885b176741d25ef9d391c6a302aed3f6c916093a621a865cb90d560774f  coen-0.4.0-amd64.iso
-```
+Testing has been performed in the following environments:
 
-### If the reproduction failed
-
-Please help us to improve it. You can install `diffoscope` https://diffoscope.org/
-and download the image from:
-https://github.com/iana-org/coen/releases/tag/v0.4.0-20180311
-and then compare it with your image executing the following command:
-
-```
-diffoscope \
-  --text diffoscope.txt \
-  path/to/public/coen-0.4.0-amd64.iso \
-  path/to/your/coen-0.4.0-amd64.iso
-```
-Please send us an issue report at https://github.com/iana-org/coen attaching the
-diffoscope.txt file.
+|          OS          |            Docker            | Podman | SELinux  | AppArmor |
+| :------------------: | :--------------------------: | :----: | :------: | :------: |
+| Debian 11.6 bullseye |    23.0.1, build a5ee5b1     |   -    |    -     | Enabled  |
+|      Arch Linux      |   23.0.1, build a5ee5b1dfc   |   -    |    -     |    -     |
+|      Fedora 37       |    23.0.1, build a5ee5b1     | 4.4.2  | Disabled |    -     |
+|    AlmaLinux 9.1     |    23.0.1, build a5ee5b1     | 4.2.0  | Disabled |    -     |
+|   CentOS 7.9.2009    |    23.0.1, build a5ee5b1     |   -    | Disabled |    -     |
+| MacOS Ventura 13.2.1 |   20.10.23, build 7155243    |   -    |    -     |    -     |
+| openSUSE Tumbleweed  | 20.10.23-ce, build 6051f1429 |   -    |    -     | Enabled  |
+|      Windows 10      |   20.10.22, build 32ac30b    |   -    |    -     |    -     |
+|  Ubuntu 22.04.2 LTS  |  20.10.17, build 100c70180f  |   -    |    -     | Enabled  |
