@@ -1,4 +1,4 @@
-Copyright (c) 2023 Internet Corporation for Assigned Names and Numbers
+Copyright (c) 2024 Internet Corporation for Assigned Names and Numbers
 ("ICANN")
 
 Permission to use, copy, modify, and distribute this software for any

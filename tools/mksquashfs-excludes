@@ -1,10 +1,16 @@
 boot/*
+root/.cache/*
+root/.rpmdb/*
 tmp/*
-var/lib/apt/lists/*
+usr/safenet/lunaclient/g5driver/x86_64/*
+usr/safenet/lunaclient/g7driver/x86_64/*
 usr/share/doc/*
 usr/share/icons/*/.icon-theme.cache
 usr/share/icons/*/icon-theme.cache
 var/cache/debconf/*
+var/cache/man/*
+var/lib/apt/lists/*
 var/lib/dpkg/info/*.md5sums
+var/lib/dpkg/status*
 var/lib/systemd/catalog/database
 var/log/*

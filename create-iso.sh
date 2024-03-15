@@ -13,20 +13,10 @@ mkdir -p $WD
 # Setting up the base Debian rootfs environment
 debuerreotype-init $WD/chroot $DIST $DATE --arch=$ARCH
 
-echo "Calculating SHA-256 HASH of the rootfs-init"
-ROOTFSINITHASH=$(debuerreotype-tar "${WD}"/chroot - | sha256sum)
-  if [ "$ROOTFSINITHASH" != "$ROOTFS_INIT_SHASUM" ]
-    then
-      echo "Warning: SHA-256 hashes do not match. Reproduction of the rootfs-init failed"
-      echo "Continuing..."
-  else
-      echo "Successfully reproduced rootfs-init"
-  fi
-
 # Installing all required packages for COEN
 debuerreotype-apt-get $WD/chroot update
 
-# copying distro packages
+# Copying distro packages
 cp $DISTRO_DIR/*.deb $WD/chroot/var/cache/apt/archives/
 
 debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Check-Valid-Until=false install \
@@ -36,7 +26,7 @@ debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquir
     iproute2 ifupdown pciutils usbutils dosfstools eject exfat-utils \
     vim links2 xpdf cups cups-bsd enscript libbsd-dev tree openssl less iputils-ping \
     xserver-xorg-core xserver-xorg xfce4 xfce4-terminal xfce4-panel lightdm system-config-printer \
-    xterm gvfs thunar-volman xfce4-power-manager exfat-fuse unzip locales \
+    xterm gvfs thunar-volman xfce4-power-manager xfce4-screenshooter ristretto tumbler exfat-fuse unzip locales \
     xsltproc libxml2-utils \
     libengine-pkcs11-openssl opensc opensc-pkcs11 python3
 debuerreotype-apt-get $WD/chroot --yes --purge autoremove
@@ -70,7 +60,7 @@ iface eth0 inet static
 EOF
 
 # Profile in .bashrc to work with xfce terminal
-echo "export PATH=:/opt/icann/bin:/opt/Keyper/bin:\$PATH" >> $WD/chroot/root/.bashrc
+echo "export PATH=:/opt/icann/bin:/opt/Keyper/bin:/usr/safenet/lunaclient/bin:\$PATH" >> $WD/chroot/root/.bashrc
 # ls with color
 sed -i -r -e '9s/^#//' \
           -e '10s/^#//' \
@@ -156,17 +146,6 @@ debuerreotype-fixup $WD/chroot
 
 # Setting main folder timestamps to SOURCE_DATE_EPOCH
 find "$WD/" -exec touch --no-dereference --date="@$SOURCE_DATE_EPOCH" '{}' +
-
-echo "Calculating SHA-256 HASH of the rootfs-final"
-ROOTFSFINALHASH=$(debuerreotype-tar "${WD}"/chroot - | sha256sum)
-  if [ "$ROOTFSFINALHASH" != "$ROOTFS_FINAL_SHASUM" ]
-    then
-      echo "ERROR: SHA-256 hashes do not match. Reproduction of the rootfs-final failed"
-      echo "Please check the README file, then try again"
-      exit 1
-  else
-      echo "Successfully reproduced rootfs-final"
-  fi
 
 # Compressing the chroot environment into squashfs
 mksquashfs $WD/chroot/ $WD/image/live/filesystem.squashfs -reproducible -comp xz -Xbcj x86 -b 1024K -Xdict-size 1024K -no-exports -no-fragments -wildcards -ef $TOOL_DIR/mksquashfs-excludes

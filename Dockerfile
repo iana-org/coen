@@ -2,18 +2,12 @@ FROM debian:bullseye-20230109-slim@sha256:1acb06a0c31fb467eb8327ad361f1091ab265e
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-COPY create-iso.sh .
-COPY variables.sh .
 COPY SHA256SUMS .
-COPY archives-env.sha256 .
-COPY archives-distro.sha256 .
-COPY archives-fontc.sha256 .
+COPY create-iso.sh .
 COPY tools/ /tools/
+COPY variables.sh .
 
 RUN sha256sum -c SHA256SUMS
-RUN sha256sum -c archives-env.sha256
-RUN sha256sum -c archives-distro.sha256
-RUN sha256sum -c archives-fontc.sha256
 
 RUN . ./variables.sh && \
     rm -f /etc/apt/sources.list && \

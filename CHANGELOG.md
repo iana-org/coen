@@ -1,3 +1,36 @@
+# [v1.1.0-20230109](https://github.com/iana-org/coen/releases/tag/v1.1.0-20230109) coen-1.1.0-amd64.iso
+
+## Contains
+
+* Release v1.1.0
+* Based on Debian 11.6 bullseye from http://snapshot.debian.org date 20230109
+* EPOCH=1673222400
+* [Key Management Tools: Legacy](https://github.com/iana-org/dnssec-keytools-legacy)
+* [Key Management Tools](https://github.com/iana-org/dnssec-keytools)
+* AEP Keyper PKCS#11 library
+* Thales Luna USB HSM 7 PKCS#11 library
+* Assorted utilities
+* Minimized Xfce Desktop Environment
+
+## Improvements
+
+* Combined all hash verifications into a single file
+
+### Packages 
+
+* Added Thales Luna HSM client package for USB HSM 7 and SDK (PKCS#11)
+* Added xfce4-screenshooter to take screenshots
+* Added ristretto to view images
+
+### Scripts 
+
+* **copy-hsmfd:** Added verbose option 
+
+### New Features 
+
+* **screencap-verify:** Bash script to take a screenshot, print it, and open it for verification
+
+
 # [v1.0.0-20230109](https://github.com/iana-org/coen/releases/tag/v1.0.0-20230109) coen-1.0.0-amd64.iso
 
 ## Contains
