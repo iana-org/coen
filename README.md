@@ -6,7 +6,9 @@ COEN is a live operating system consisting of:
 - [Key Management Tools: Legacy](https://github.com/iana-org/dnssec-keytools-legacy)
 - [Key Management Tools](https://github.com/iana-org/dnssec-keytools) 
 - The AEP Keyper PKCS#11 library
+- The Thales Luna USB HSM 7 PKCS#11 library
 - Assorted utilities
+- Minimized Xfce Desktop Environment
 
 ## Table of Contents<!-- omit in toc -->
 - [Reproducible COEN ISO image to enhance Root Zone DNSSEC Key Signing Key ceremony trustworthiness](#reproducible-coen-iso-image-to-enhance-root-zone-dnssec-key-signing-key-ceremony-trustworthiness)
@@ -80,7 +82,8 @@ If permission errors are encountered executing `make all` or `make podman-all` a
 Final hash result should match with the following:
 
 ```
-405d7c76c114feb93fcc5345e13850e59d86341a08161207d8eb8c395410c13a  coen-1.0.0-amd64.iso
+SHA-256:    2363d9c484e919b58bd45f413dedaed364712d72b3b7858c0fec5e3c529390d8
+PGP Words:  blowtorch Galveston sugar reproduce mural ultimate bedlamp positive obtuse souvenir eyetooth decadence commence unify robust sociable flytrap hideaway button holiness scallion processor music megaton artist unicorn eyeglass crossover Dupont molasses peachy stupendous
 ```
 
 ## Tested Platforms
@@ -94,7 +97,7 @@ Testing has been performed in the following environments:
 |      Fedora 37       |    23.0.1, build a5ee5b1     | 4.4.2  | Disabled |    -     |
 |    AlmaLinux 9.1     |    23.0.1, build a5ee5b1     | 4.2.0  | Disabled |    -     |
 |   CentOS 7.9.2009    |    23.0.1, build a5ee5b1     |   -    | Disabled |    -     |
-| MacOS Ventura 13.2.1 |   20.10.23, build 7155243    |   -    |    -     |    -     |
+| macOS Sonoma 14.3.1  |   25.0.3, build 4debf41      |   -    |    -     |    -     |
 | openSUSE Tumbleweed  | 20.10.23-ce, build 6051f1429 |   -    |    -     | Enabled  |
 |      Windows 10      |   20.10.22, build 32ac30b    |   -    |    -     |    -     |
 |  Ubuntu 22.04.2 LTS  |  20.10.17, build 100c70180f  |   -    |    -     | Enabled  |
