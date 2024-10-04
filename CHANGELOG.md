@@ -1,3 +1,36 @@
+# [v2.0.0-20240701](https://github.com/iana-org/coen/releases/tag/v2.0.0-20240701) coen-2.0.0-amd64.iso
+
+## Contains
+
+* Release v2.0.0
+* Based on Debian 12.6 bullseye from http://snapshot.debian.org date 20240701
+* EPOCH=1719792000
+* [Key Management Tools: Legacy](https://github.com/iana-org/dnssec-keytools-legacy)
+* [Key Management Tools](https://github.com/iana-org/dnssec-keytools)
+* AEP Keyper PKCS#11 library
+* Thales Luna USB HSM 7 PKCS#11 library and GemEngine
+* Assorted utilities
+* Minimized Xfce Desktop Environment
+
+## Improvements
+
+* Updated [Key Management Tools](https://github.com/iana-org/dnssec-keytools)
+* Changed terminal text and background colors for optimized printouts
+
+### Packages 
+
+* Removed exfat-fuse
+* Replaced exfat-utils with exfatprogs
+
+### Scripts 
+
+* None
+
+### New Features 
+
+* Added GemEngine
+
+
 # [v1.1.0-20230109](https://github.com/iana-org/coen/releases/tag/v1.1.0-20230109) coen-1.1.0-amd64.iso
 
 ## Contains

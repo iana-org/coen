@@ -23,10 +23,10 @@ debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquir
     --no-install-recommends --yes \
     linux-image-$ARCH live-boot systemd-sysv \
     grub-common grub-pc-bin grub-efi-amd64-bin \
-    iproute2 ifupdown pciutils usbutils dosfstools eject exfat-utils \
+    iproute2 ifupdown pciutils usbutils dosfstools eject exfatprogs \
     vim links2 xpdf cups cups-bsd enscript libbsd-dev tree openssl less iputils-ping \
     xserver-xorg-core xserver-xorg xfce4 xfce4-terminal xfce4-panel lightdm system-config-printer \
-    xterm gvfs thunar-volman xfce4-power-manager xfce4-screenshooter ristretto tumbler exfat-fuse unzip locales \
+    xterm gvfs thunar-volman xfce4-power-manager xfce4-screenshooter ristretto tumbler unzip locales \
     xsltproc libxml2-utils \
     libengine-pkcs11-openssl opensc opensc-pkcs11 python3
 debuerreotype-apt-get $WD/chroot --yes --purge autoremove
@@ -155,17 +155,6 @@ chmod 644 $WD/image/live/filesystem.squashfs
 
 # Setting squashfs folder timestamps to SOURCE_DATE_EPOCH
 find "$WD/image/" -exec touch --no-dereference --date="@$SOURCE_DATE_EPOCH" '{}' +
-
-echo "Calculating SHA-256 HASH of the squashfs"
-SQUASHFSHASH=$(sha256sum < "${WD}"/image/live/filesystem.squashfs)
-  if [ "$SQUASHFSHASH" != "$SQUASHFS_SHASUM" ]
-    then
-      echo "ERROR: SHA-256 hashes do not match. Reproduction of the squashfs failed"
-      echo "Please check the README file, then try again"
-      exit 1
-  else
-      echo "Successfully reproduced squashfs"
-  fi
 
 # Creating the iso
 xorriso -as mkisofs -graft-points -b 'boot/grub/i386-pc/eltorito.img' -no-emul-boot -boot-load-size 4 -boot-info-table --grub2-boot-info --grub2-mbr "$WD/chroot/usr/lib/grub/i386-pc/boot_hybrid.img" --efi-boot 'boot/grub/efi.img' -efi-boot-part --efi-boot-image --protective-msdos-label -o "$ISONAME" -r "$WD/image" --sort-weight 0 '/' --sort-weight 1 '/boot'

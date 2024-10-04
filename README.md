@@ -6,7 +6,7 @@ COEN is a live operating system consisting of:
 - [Key Management Tools: Legacy](https://github.com/iana-org/dnssec-keytools-legacy)
 - [Key Management Tools](https://github.com/iana-org/dnssec-keytools) 
 - The AEP Keyper PKCS#11 library
-- The Thales Luna USB HSM 7 PKCS#11 library
+- The Thales Luna USB HSM 7 PKCS#11 library and GemEngine
 - Assorted utilities
 - Minimized Xfce Desktop Environment
 
@@ -82,22 +82,17 @@ If permission errors are encountered executing `make all` or `make podman-all` a
 Final hash result should match with the following:
 
 ```
-SHA-256:    2363d9c484e919b58bd45f413dedaed364712d72b3b7858c0fec5e3c529390d8
-PGP Words:  blowtorch Galveston sugar reproduce mural ultimate bedlamp positive obtuse souvenir eyetooth decadence commence unify robust sociable flytrap hideaway button holiness scallion processor music megaton artist unicorn eyeglass crossover Dupont molasses peachy stupendous
+SHA-256:    4d2d61b982550df637102701e73a14f292d51bf98b823fc9724e0d9a8e91cead
+PGP Words:  dreadful clergyman fallout proximate miser equipment ancient vocalist clamshell autopsy brackish adviser transit corrosion baboon vagabond physique specialist beeswax Waterloo obtuse Istanbul cowbell retrospect highchair distortion ancient newsletter orca miracle spyglass perceptive  
 ```
 
 ## Tested Platforms
 
 Testing has been performed in the following environments:
 
-|          OS          |            Docker            | Podman | SELinux  | AppArmor |
-| :------------------: | :--------------------------: | :----: | :------: | :------: |
-| Debian 11.6 bullseye |    23.0.1, build a5ee5b1     |   -    |    -     | Enabled  |
-|      Arch Linux      |   23.0.1, build a5ee5b1dfc   |   -    |    -     |    -     |
-|      Fedora 37       |    23.0.1, build a5ee5b1     | 4.4.2  | Disabled |    -     |
-|    AlmaLinux 9.1     |    23.0.1, build a5ee5b1     | 4.2.0  | Disabled |    -     |
-|   CentOS 7.9.2009    |    23.0.1, build a5ee5b1     |   -    | Disabled |    -     |
-| macOS Sonoma 14.3.1  |   25.0.3, build 4debf41      |   -    |    -     |    -     |
-| openSUSE Tumbleweed  | 20.10.23-ce, build 6051f1429 |   -    |    -     | Enabled  |
-|      Windows 10      |   20.10.22, build 32ac30b    |   -    |    -     |    -     |
-|  Ubuntu 22.04.2 LTS  |  20.10.17, build 100c70180f  |   -    |    -     | Enabled  |
+|           OS          |            Docker            | Podman | SELinux  | AppArmor |
+| :-------------------: | :--------------------------: | :----: | :------: | :------: |
+|     Debian 12.7       | 20.10.24+dfsg1, build 297e128|   -    |    -     | Enabled  |
+|     Debian 11.11      |    27.3.1, build ce12230     |   -    |    -     | Enabled  |
+|      macOS 14.6.1     |    27.2.0, build 3ab4256     |   -    |    -     |    -     |
+|       RHEL 9.4        |             -                | 4.4.1  | Disabled |    -     |
