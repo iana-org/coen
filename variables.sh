@@ -5,7 +5,7 @@ set -x   # Print each command before executing it
 set -e   # Exit immediately should a command fail
 set -u   # Treat unset variables as an error and exit immediately
 
-export RELEASE=2.0.0			        # Release version number
+export RELEASE=2.0.1			        # Release version number
 export DATE=20240701			        # Timestamp to use for version packages (`date +%Y%m%d`)
 export LOCALE_LC_ALL=POSIX              # Current OS locale setting
 export DIST=bookworm			        # Debian distribution base image
@@ -18,4 +18,4 @@ export HOOK_DIR=$TOOL_DIR/hooks         # Hooks
 export PACKAGE_DIR=$TOOL_DIR/packages   # Packages
 export DISTRO_DIR=$TOOL_DIR/archives-distro # Distro packages
 export DEV_DIR=$TOOL_DIR/archives-dev   # Dev packages
-export ISO_SHASUM="4d2d61b982550df637102701e73a14f292d51bf98b823fc9724e0d9a8e91cead  -" # ISO image SHA-256
+export ISO_SHASUM="78e1b1452d62b075d5658ac652ad6eeccf15a81d25d63f55b9fc983463ba91d4  -" # ISO image SHA-256

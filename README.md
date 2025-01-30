@@ -82,8 +82,8 @@ If permission errors are encountered executing `make all` or `make podman-all` a
 Final hash result should match with the following:
 
 ```
-SHA-256:    4d2d61b982550df637102701e73a14f292d51bf98b823fc9724e0d9a8e91cead
-PGP Words:  dreadful clergyman fallout proximate miser equipment ancient vocalist clamshell autopsy brackish adviser transit corrosion baboon vagabond physique specialist beeswax Waterloo obtuse Istanbul cowbell retrospect highchair distortion ancient newsletter orca miracle spyglass perceptive  
+SHA-256:    78e1b1452d62b075d5658ac652ad6eeccf15a81d25d63f55b9fc983463ba91d4
+PGP Words:  island tolerance sailboat detector button gadgetry ruffled impartial sterling glossary Oakland responsive Dupont perceptive goldfish unicorn stagehand bifocals retouch breakaway bombast speculate cowbell equipment sentence Wilmington printer confidence flatfoot puberty pheasant souvenir
 ```
 
 ## Tested Platforms
@@ -92,7 +92,7 @@ Testing has been performed in the following environments:
 
 |           OS          |            Docker            | Podman | SELinux  | AppArmor |
 | :-------------------: | :--------------------------: | :----: | :------: | :------: |
-|     Debian 12.7       | 20.10.24+dfsg1, build 297e128|   -    |    -     | Enabled  |
+|     Debian 12.9       | 20.10.24+dfsg1, build 297e128|   -    |    -     | Enabled  |
 |     Debian 11.11      |    27.3.1, build ce12230     |   -    |    -     | Enabled  |
-|      macOS 14.6.1     |    27.2.0, build 3ab4256     |   -    |    -     |    -     |
-|       RHEL 9.4        |             -                | 4.4.1  | Disabled |    -     |
+|      macOS 14.7.1     |    27.4.0, build bde2b89     |   -    |    -     |    -     |
+|       RHEL 9.5        |             -                | 4.9.4  | Disabled |    -     |

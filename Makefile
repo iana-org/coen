@@ -1,4 +1,4 @@
-RELEASE = 2.0.0
+RELEASE = 2.0.1
 
 .PHONY: usage build podman-build remove podman-remove run podman-run copy podman-copy all podman-all default
 
