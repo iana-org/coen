@@ -127,7 +127,7 @@ cat > $WD/image/boot/grub/grub.cfg << EOF
 set timeout=1
 
 menuentry "coen-${RELEASE} ${ARCH}" {
-	linux	/boot/vmlinuz  boot=live locales=${LOCALE_LC_ALL} keymap=us language=us net.ifnames=0 timezone=Etc/UTC live-media=removable nopersistence selinux=0 STATICIP=frommedia modprobe.blacklist=pcspkr,hci_uart,btintel,btqca,btbcm,bluetooth,snd_hda_intel,snd_hda_codec_realtek,snd_soc_skl,snd_soc_skl_ipc,snd_soc_sst_ipc,snd_soc_sst_dsp,snd_hda_ext_core,snd_soc_sst_match,snd_soc_core,snd_compress,snd_hda_core,snd_pcm,snd_timer,snd,soundcore
+	linux	/boot/vmlinuz  boot=live locales=${LOCALE_LC_ALL} keymap=us language=us net.ifnames=0 timezone=Etc/UTC nopersistence selinux=0 STATICIP=frommedia modprobe.blacklist=pcspkr,hci_uart,btintel,btqca,btbcm,bluetooth,snd_hda_intel,snd_hda_codec_realtek,snd_soc_skl,snd_soc_skl_ipc,snd_soc_sst_ipc,snd_soc_sst_dsp,snd_hda_ext_core,snd_soc_sst_match,snd_soc_core,snd_compress,snd_hda_core,snd_pcm,snd_timer,snd,soundcore
 	initrd	/boot/initrd.img
 }
 

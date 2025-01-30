@@ -1,4 +1,4 @@
-4245271539e62bf0e7911540b153bbc3b24c3cd0efd2be1862391379156a7d84  ./create-iso.sh
+a3e388f380a69464602f0fd16bc8d92d1452dd5cc31747e3c3f712a160e980cf  ./create-iso.sh
 03d23023e3efc4c5bcd29fc92151b6b18788e497877bfd97f11193fca9c63b61  ./tools/archives-dev/alien_8.95.6_all.deb
 7d798ed8c21fc7387127de1dfdb4640003d8ba033ae5a1ff29559610cbd0c323  ./tools/archives-dev/autoconf_2.71-3_all.deb
 f9a5758d87b5389bf2dbb00cc9c48e0cf59bb0ac842c5ce25d41e4bfa3f2f962  ./tools/archives-dev/automake_1%3a1.16.5-1.3_all.deb
@@ -646,4 +646,4 @@ e02ebbd3701cf468dbf98d6d917fbe0325e881f07fe8b316150c8d2a64486e66  ./tools/archiv
 4827c67de0699bc1e7d58b161c604b557a3c6f819d918c52e7f362ed851300e2  ./tools/packages/ksk-tools-2-part_ab
 95e4f4ab760d4aa0a912c514588d83fdfb6c1ae6536cbb7d531fbe4d6bb8769b  ./tools/packages/ksk-tools-2-part_ac
 a7ce2399331fa1a037727f15ad2b29e553994af2c41f0b43c8a4115370f88f03  ./tools/packages/ksk-xfce-custom-2.0.0coen_amd64.deb
-2ab4688fc374c6881485dcf0afcfcac0490ba68b05e69b74f671fe90d86e223b  ./variables.sh
+6f201e2f7cbeeda24ff488b4114cae022fd10cfb134a86d4f6d760630fbc2f1d  ./variables.sh
