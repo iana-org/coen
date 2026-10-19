@@ -1,9 +1,43 @@
+# [v3.0.0-20260731](https://github.com/iana-org/coen/releases/tag/v3.0.0-20260731) coen-3.0.0-amd64.iso
+
+## Contains
+
+* Release v3.0.0 (for the Acceptance Testing Ceremony)
+* Based on Debian 13.6 trixie from [snapshot.debian.org](https://snapshot.debian.org), dated 20260731
+* EPOCH=1785456000
+* [Key Management Tools](https://github.com/iana-org/dnssec-keytools/tree/test/2026-20260913-dab0d1f), commit `dab0d1f` (2026-09-13)
+* Thales Luna Client 10.9.3
+* Thales GemEngine 1.6
+* Thales Luna documentation dated 2026-09-15
+* Assorted utilities
+* Minimized Xfce Desktop Environment
+
+## Improvements
+
+* Updated [Key Management Tools](https://github.com/iana-org/dnssec-keytools) for acceptance testing
+* Removed all AEP Keyper functionality and legacy dependencies
+
+### Packages 
+
+* Added `zstd` to support the default Debian initramfs compression environment
+
+### Scripts 
+
+* None
+
+### Build Process
+
+* Updated the build process to reconstruct large Debian packages from split files
+* Updated LightDM configuration to support automatic root login
+* Added a requirement to run Podman in rootful mode to reproduce the expected ISO hash
+
+
 # [v2.0.1-20240701](https://github.com/iana-org/coen/releases/tag/v2.0.1-20240701) coen-2.0.1-amd64.iso
 
 ## Contains
 
 * Release v2.0.1
-* Based on Debian 12.6 bullseye from http://snapshot.debian.org date 20240701
+* Based on Debian 12.6 bookworm from http://snapshot.debian.org date 20240701
 * EPOCH=1719792000
 * [Key Management Tools: Legacy](https://github.com/iana-org/dnssec-keytools-legacy)
 * [Key Management Tools](https://github.com/iana-org/dnssec-keytools)
@@ -34,7 +68,7 @@
 ## Contains
 
 * Release v2.0.0
-* Based on Debian 12.6 bullseye from http://snapshot.debian.org date 20240701
+* Based on Debian 12.6 bookworm from http://snapshot.debian.org date 20240701
 * EPOCH=1719792000
 * [Key Management Tools: Legacy](https://github.com/iana-org/dnssec-keytools-legacy)
 * [Key Management Tools](https://github.com/iana-org/dnssec-keytools)

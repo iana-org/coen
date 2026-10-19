@@ -1,11 +1,17 @@
 #!/bin/bash
+# Install and configure KSK software, Xfce customization, and Thales Luna HSM support
 
 set -x   # Print each command before executing it
 set -e   # Exit immediately should a command fail
 set -u   # Treat unset variables as an error and exit immediately
 
-# Installs KSK software and XFCE customization packages
-cat $PACKAGE_DIR/ksk-tools-2-part_* > $WD/chroot/tmp/ksk-tools-2.0.0coen_amd64.deb
+# Install KSK software and XFCE customization packages
+# Reconstruct split Debian packages
+for first_part in "$PACKAGE_DIR"/*.deb.part_aa; do
+    [ -e "$first_part" ] || continue
+    deb="${first_part%.part_aa}"
+    cat "${deb}.part_"* > "$deb"
+done
 cp $PACKAGE_DIR/*.deb $WD/chroot/tmp/
 debuerreotype-chroot $WD/chroot dpkg -i -R /tmp/
 rm -f $WD/chroot/tmp/*.deb
@@ -27,7 +33,7 @@ debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquir
 debuerreotype-apt-get $WD/chroot --yes --purge autoremove
 debuerreotype-apt-get $WD/chroot --yes clean
 
-# Using a "fake" uname command to get the container kernel version
+# Use a "fake" uname command to report the container kernel version
 mv $WD/chroot/usr/bin/uname $WD/chroot/usr/bin/uname.old
 cp -p $WD/chroot/opt/luna/fake_uname.sh $WD/chroot/usr/bin/uname
 
@@ -44,8 +50,8 @@ mv -f $WD/chroot/usr/bin/uname.old $WD/chroot/usr/bin/uname
 debuerreotype-chroot $WD/chroot tar -xf $(ls -1 $WD/chroot/opt/luna/engine/*.tar | sed 's,'"${WD}/chroot/"',,') --directory /opt/luna/ 
 
 # Copy gem.so and sautil binaries
-cp $WD/chroot/opt/luna/gemengine*/builds/linux/debian/64/3.0/gem.so $WD/chroot/usr/lib/x86_64-linux-gnu/engines-3/
-cp $WD/chroot/opt/luna/gemengine*/builds/linux/debian/64/3.0/sautil $WD/chroot/usr/local/bin/
+cp $WD/chroot/opt/luna/gemengine*/builds/linux/debian/64/$GEMENGINE_OPENSSL/gem.so $WD/chroot/usr/lib/x86_64-linux-gnu/engines-3/
+cp $WD/chroot/opt/luna/gemengine*/builds/linux/debian/64/$GEMENGINE_OPENSSL/sautil $WD/chroot/usr/local/bin/
 
 # Add Open GemEngine section to /etc/Chrystoki.conf
 cat $WD/chroot/opt/luna/engine/GemEngine.conf >> $WD/chroot/etc/Chrystoki.conf

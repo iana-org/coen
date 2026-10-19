@@ -1,4 +1,4 @@
-FROM debian:bookworm-20240701-slim@sha256:f528891ab1aa484bf7233dbcc84f3c806c3e427571d75510a9d74bb5ec535b33
+FROM debian:trixie-20260713-slim@sha256:9bb8a3626890e084ab54e888fdd7c4b6d2f119071cd4c5dc5fecb4d73062aa5f
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -26,7 +26,7 @@ RUN apt-get install -o Acquire::Check-Valid-Until=false --no-install-recommends 
     liblzo2-2 xorriso debootstrap debuerreotype locales squashfs-tools
     
 RUN rm -rf /var/lib/apt/lists/* \
-	&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
-ENV LANG=en_US.utf8
+    && localedef -i en_US -c -f UTF-8 en_US.UTF-8
+ENV LANG=en_US.UTF-8
 
 CMD ["/create-iso.sh"]

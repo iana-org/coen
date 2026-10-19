@@ -16,6 +16,13 @@ debuerreotype-init $WD/chroot $DIST $DATE --arch=$ARCH
 # Installing all required packages for COEN
 debuerreotype-apt-get $WD/chroot update
 
+# Reconstruct split Debian packages
+for first_part in "$DISTRO_DIR"/*.deb.part_aa; do
+    [ -e "$first_part" ] || continue
+    deb="${first_part%.part_aa}"
+    cat "${deb}.part_"* > "$deb"
+done
+
 # Copying distro packages
 cp $DISTRO_DIR/*.deb $WD/chroot/var/cache/apt/archives/
 
@@ -28,7 +35,7 @@ debuerreotype-chroot $WD/chroot DEBIAN_FRONTEND=noninteractive apt-get -o Acquir
     xserver-xorg-core xserver-xorg xfce4 xfce4-terminal xfce4-panel lightdm system-config-printer \
     xterm gvfs thunar-volman xfce4-power-manager xfce4-screenshooter ristretto tumbler unzip locales \
     xsltproc libxml2-utils \
-    libengine-pkcs11-openssl opensc opensc-pkcs11 python3
+    libengine-pkcs11-openssl opensc opensc-pkcs11 python3 zstd
 debuerreotype-apt-get $WD/chroot --yes --purge autoremove
 debuerreotype-apt-get $WD/chroot --yes clean
 
@@ -38,7 +45,7 @@ do
   $FIXES
 done
 
-# root without password
+# Remove the root password
 debuerreotype-chroot $WD/chroot passwd -d root
 
 # Configuring network
@@ -60,14 +67,9 @@ iface eth0 inet static
 EOF
 
 # Profile in .bashrc to work with xfce terminal
-echo "export PATH=:/opt/icann/bin:/opt/Keyper/bin:/usr/safenet/lunaclient/bin:\$PATH" >> $WD/chroot/root/.bashrc
+echo "export PATH=/opt/icann/bin:/usr/safenet/lunaclient/bin:\$PATH" >> $WD/chroot/root/.bashrc
 # ls with color
-sed -i -r -e '9s/^#//' \
-          -e '10s/^#//' \
-          -e '11s/^#//' \
-    $WD/chroot/root/.bashrc
-# Set HSM environment
-egrep -v '^\s*(#|$)' $WD/chroot/opt/dnssec/fixenv >> $WD/chroot/root/.bashrc
+echo "alias ls='ls --color=auto'" >> $WD/chroot/root/.bashrc 
 # Set the correct locale
 echo "export LC_ALL=${LOCALE_LC_ALL}" >> $WD/chroot/root/.bashrc
 
@@ -85,14 +87,18 @@ TTYVTDisallocate=no
 EOF
 done
 
-# XFCE root auto login
-sed -i -r -e "s|^#.*autologin-user=.*\$|autologin-user=root|" \
-          -e "s|^#.*autologin-user-timeout=.*\$|autologin-user-timeout=0|" \
-    $WD/chroot/etc/lightdm/lightdm.conf
+# Configure LightDM for automatic root login.
+mkdir -p "$WD/chroot/etc/lightdm/lightdm.conf.d"
+cat > "$WD/chroot/etc/lightdm/lightdm.conf.d/50-autologin.conf" << EOF
+[Seat:*]
+autologin-user=root
+autologin-user-timeout=0
+EOF
 
-sed -i --regexp-extended \
-    '11s/.*/#&/' \
-    $WD/chroot/etc/pam.d/lightdm-autologin
+# Allow LightDM automatic login for root
+sed -i \
+    '/^[[:space:]]*auth[[:space:]]\+required[[:space:]]\+pam_succeed_if\.so[[:space:]]\+user[[:space:]]*!=[[:space:]]*root[[:space:]]\+quiet_success[[:space:]]*$/s/^/# /' \
+    "$WD/chroot/etc/pam.d/lightdm-autologin"
 
 # Disabling lastlog because autologin is enabled
 sed -i '/^[^#].*pam_lastlog\.so/s/^/# /' $WD/chroot/etc/pam.d/login
@@ -141,10 +147,10 @@ grub-mkimage --directory "$WD/chroot/usr/lib/grub/x86_64-efi" --prefix '()/boot/
 mformat -C -f 2880 -L 16 -N 0 -i "$WD/image/boot/grub/efi.img" ::.
 mcopy -s -i "$WD/image/boot/grub/efi.img" "$WD/image/efi" ::/.
 
-# Setting dates to SOURCE_DATE_EPOCH
+# Setting timestamps to SOURCE_DATE_EPOCH
 debuerreotype-fixup $WD/chroot
 
-# Setting main folder timestamps to SOURCE_DATE_EPOCH
+# Set timestamps in the working directory to SOURCE_DATE_EPOCH
 find "$WD/" -exec touch --no-dereference --date="@$SOURCE_DATE_EPOCH" '{}' +
 
 # Compressing the chroot environment into squashfs
@@ -153,7 +159,7 @@ mksquashfs $WD/chroot/ $WD/image/live/filesystem.squashfs -reproducible -comp xz
 # Setting permissions for squashfs.img
 chmod 644 $WD/image/live/filesystem.squashfs
 
-# Setting squashfs folder timestamps to SOURCE_DATE_EPOCH
+# Set timestamps in the ISO image directory to SOURCE_DATE_EPOCH
 find "$WD/image/" -exec touch --no-dereference --date="@$SOURCE_DATE_EPOCH" '{}' +
 
 # Creating the iso
